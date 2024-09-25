@@ -1,4 +1,4 @@
-# ComfyUI GLM4 Wrapper
+# ComfyUI GLM-4 Wrapper
 
 This repository contains custom nodes for ComfyUI, specifically designed to enhance and infer prompts using the GLM-4 model on local hardware.
 The nodes leverage the GLM-4 model to generate detailed and descriptive video captions or enhance user-provided prompts, among regular inference.
