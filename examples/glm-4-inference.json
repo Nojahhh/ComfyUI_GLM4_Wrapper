@@ -1,0 +1,161 @@
+{
+  "last_node_id": 6,
+  "last_link_id": 4,
+  "nodes": [
+    {
+      "id": 3,
+      "type": "ShowText|pysssss",
+      "pos": {
+        "0": 1190,
+        "1": 310
+      },
+      "size": {
+        "0": 428,
+        "1": 351
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 4,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": null,
+          "shape": 6
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ShowText|pysssss"
+      },
+      "widgets_values": [
+        "",
+        "The celebrity depicted in the image as playing this character is Gal Gadot. She is a well-known Israeli actress and model, born on April 30, 1985, in Rishon LeZion, Israel. Known for her striking looks and versatile acting abilities, Gadot began her career in modeling and quickly transitioned into acting.\n\nSince then, she has established a successful filmography, with her breakthrough role coming in 2008 as Gisele Yashar in the action romantic comedy film \"Battle of the Sexes.\" However, she gained international recognition for her portrayal of Israeli spy agent Gad Elbaz in the espionage film \"Egg.\" \n\nHer breakthrough came in 2017 when she was cast as the titular character in the DC Extended Universe film \"Wonder Woman,\" directed by Patty Jenkins. The film was a critical and commercial success, and Gadot's performance was widely acclaimed. She reprised the role in the sequels \"Wonder Woman 1984\" (2020) and \"Wonder Woman 3\" (scheduled for release in 2023).\n\nAs for her future, it's likely that Gadot will continue to be a prominent figure in the entertainment industry, with plans for multiple sequels and spin-offs of the \"Wonder Woman\" franchise. Given her popularity and the success of the film, it's safe to predict that she will remain a high-profile celebrity for many years to come. Moreover, with her versatile acting skills, Gadot may also continue to appear in films outside the superhero genre."
+      ]
+    },
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": {
+        "0": 290,
+        "1": 310
+      },
+      "size": {
+        "0": 315,
+        "1": 314
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "gal-gadot_wonder-woman.png",
+        "image"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "GLM-4 Inferencing",
+      "pos": {
+        "0": 680,
+        "1": 310
+      },
+      "size": {
+        "0": 438.53070068359375,
+        "1": 365.0912170410156
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 3,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output_text",
+          "type": "STRING",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GLM-4 Inferencing"
+      },
+      "widgets_values": [
+        "THUDM/glm-4v-9b",
+        "bf16",
+        "You are a very intelligent bot who can classify everything from humans to molecules",
+        "What is the name of the celebrity playing this character? Explain who she is and where she was born and what her future might look like.",
+        2048,
+        0.7,
+        50,
+        1,
+        1,
+        true
+      ]
+    }
+  ],
+  "links": [
+    [
+      3,
+      2,
+      0,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      4,
+      6,
+      0,
+      3,
+      0,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.6209213230591552,
+      "offset": [
+        621.0361471101197,
+        334.12464697081396
+      ]
+    }
+  },
+  "version": 0.4
+}
