@@ -1,3 +1,8 @@
+# This file contains the node classes for the GLM-4 wrapper nodes in the Comfy platform.
+# The GLM-4 wrapper nodes are used to interact with the GLM-4 models for enhancing prompts and inferencing.
+# The GLM-4 models are used for text generation tasks and image to video captioning tasks.
+# Author: Johan Mellin, 2024, Stockholm, Sweden
+
 import torch
 import comfy.model_management as mm
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
