@@ -1,8 +1,9 @@
 # ComfyUI GLM-4 Wrapper
 
 This repository contains custom nodes for ComfyUI, specifically designed to enhance and infer prompts using the GLM-4 model on local hardware.
-The nodes leverage the GLM-4 model to generate detailed and descriptive video captions or enhance user-provided prompts, among regular inference.
-All models will be downloaded automatically through HuggingFace.co.
+The nodes leverage the GLM-4 model to generate detailed and descriptive image/video captions or enhance user-provided prompts, among regular inference.
+Prompts and inference can be combined with image if `THUDM/glm-4v-9b` model is used.
+All models will be downloaded automatically through HuggingFace.co. `THUDM/glm-4v-9b` will take ~26 GB of hdd space and `THUDM/glm-4-9b` will take ~18 GB of hdd space.
 The nodes containes an "unload_model" option which frees up VRAM space and makes it suitable for workflows that requires larger VRAM space, like FLUX.1-dev and CogVideoX-5b(-I2V).
 
 The prompt enhancer is based this example from THUDM [convert_demo.py](https://github.com/THUDM/CogVideo/blob/main/inference/convert_demo.py).
@@ -44,14 +45,14 @@ Enhances a given prompt using the GLM-4 model.
 #### Input Parameters
 
 - **model**: Choose from available GLM-4 models. Model will download automatically from HuggingFace.co.
-- **precision**: Precision type (`fp16`, `fp32`, `bf16`). 
+- **precision**: Precision type (`fp16`, `fp32`, `bf16`). `THUDM/glm-4v-9b` requires bf16 and will be runned in 4-bit quant by default.
 - **prompt**: Base prompt to enhance.
 - **max_tokens**: Maximum number of output tokens.
 - **temperature**: Temperature parameter for sampling.
 - **top_k**: Top-k parameter for sampling.
 - **top_p**: Top-p parameter for sampling.
 - **repetition_penalty**: Repetition penalty for sampling.
-- **image** (optional): Image to enhance the prompt.
+- **image** (optional): Image to enhance the prompt. Only works with `THUDM/glm-4v-9b`.
 - **unload_model**: Unload the model after use.
 
 #### Output
