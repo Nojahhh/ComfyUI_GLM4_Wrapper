@@ -6,7 +6,7 @@ Prompts and inference can be combined with image if `THUDM/glm-4v-9b` model is u
 All models will be downloaded automatically through HuggingFace.co. `THUDM/glm-4v-9b` will take ~26 GB of hdd space and `THUDM/glm-4-9b` will take ~18 GB of hdd space.
 The nodes containes an "unload_model" option which frees up VRAM space and makes it suitable for workflows that requires larger VRAM space, like FLUX.1-dev and CogVideoX-5b(-I2V).
 
-The prompt enhancer is based this example from THUDM [convert_demo.py](https://github.com/THUDM/CogVideo/blob/main/inference/convert_demo.py).
+The prompt enhancer is based on this example from THUDM [convert_demo.py](https://github.com/THUDM/CogVideo/blob/main/inference/convert_demo.py).
 Thier demo is only for usage through OpenAI API and I wanted to build something local.
 
 Hope you will enjoy your enhanced prompts and inference capabilities of these models. They are great!
