@@ -31,7 +31,7 @@ class GLM4PromptEnhancer:
         "repetition_penalty": ("FLOAT", {"default": 1.1, "tooltip": "Repetition penalty for sampling"}),
       },
       "optional": {
-        "image": ("IMAGE", {"tooltip": "Provide an image to enhance the prompt"}),
+        "image": ("IMAGE", {"tooltip": "Provide an image to enhance the prompt. Only supported for glm-4v-9b model."}),
         "unload_model": ("BOOLEAN", {"default": True, "tooltip": "Unload the model after use to free up memory"}),
       }
     }
