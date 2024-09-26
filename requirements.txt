@@ -1,5 +1,5 @@
 torch>=1.12.0
-transformers>=4.30.0
+transformers>=4.44.0
 Pillow>=9.0.0
 huggingface-hub>=0.14.1
 numpy>=1.21.0
