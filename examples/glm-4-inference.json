@@ -1,26 +1,26 @@
 {
-  "last_node_id": 6,
-  "last_link_id": 4,
+  "last_node_id": 10,
+  "last_link_id": 13,
   "nodes": [
     {
       "id": 3,
       "type": "ShowText|pysssss",
       "pos": {
-        "0": 1190,
-        "1": 310
+        "0": 1210,
+        "1": 270
       },
       "size": {
         "0": 428,
         "1": 351
       },
       "flags": {},
-      "order": 2,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
           "name": "text",
           "type": "STRING",
-          "link": 4,
+          "link": 13,
           "widget": {
             "name": "text"
           }
@@ -46,8 +46,8 @@
       "id": 2,
       "type": "LoadImage",
       "pos": {
-        "0": 290,
-        "1": 310
+        "0": 390,
+        "1": 450
       },
       "size": {
         "0": 315,
@@ -62,7 +62,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            3
+            11
           ]
         },
         {
@@ -80,24 +80,62 @@
       ]
     },
     {
-      "id": 6,
-      "type": "GLM-4 Inferencing",
+      "id": 8,
+      "type": "GLM-4 Model Loader",
       "pos": {
-        "0": 680,
-        "1": 310
+        "0": 390,
+        "1": 270
       },
       "size": {
-        "0": 438.53070068359375,
-        "1": 365.0912170410156
+        "0": 315,
+        "1": 106
       },
       "flags": {},
       "order": 1,
       "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "GLMPipeline",
+          "type": "GLMPipeline",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GLM-4 Model Loader"
+      },
+      "widgets_values": [
+        "THUDM/glm-4v-9b",
+        "bf16",
+        "8"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "GLM-4 Inferencing",
+      "pos": {
+        "0": 760,
+        "1": 270
+      },
+      "size": [
+        400,
+        340
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
       "inputs": [
+        {
+          "name": "GLMPipeline",
+          "type": "GLMPipeline",
+          "link": 12
+        },
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 3,
+          "link": 11,
           "shape": 7
         }
       ],
@@ -106,7 +144,7 @@
           "name": "output_text",
           "type": "STRING",
           "links": [
-            4
+            13
           ],
           "slot_index": 0
         }
@@ -115,11 +153,9 @@
         "Node name for S&R": "GLM-4 Inferencing"
       },
       "widgets_values": [
-        "THUDM/glm-4v-9b",
-        "bf16",
-        "You are a very intelligent bot who can classify everything from humans to molecules",
         "What is the name of the celebrity playing this character? Explain who she is and where she was born and what her future might look like.",
-        2048,
+        "What is the name of the celebrity playing this character? Explain who she is and where she was born and what her future might look like.",
+        250,
         0.7,
         50,
         1,
@@ -130,16 +166,24 @@
   ],
   "links": [
     [
-      3,
+      11,
       2,
       0,
-      6,
-      0,
+      10,
+      1,
       "IMAGE"
     ],
     [
-      4,
-      6,
+      12,
+      8,
+      0,
+      10,
+      0,
+      "GLMPipeline"
+    ],
+    [
+      13,
+      10,
       0,
       3,
       0,
@@ -150,10 +194,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.6209213230591552,
+      "scale": 0.8264462809917361,
       "offset": [
-        621.0361471101197,
-        334.12464697081396
+        157.57704486550713,
+        87.84898669179454
       ]
     }
   },

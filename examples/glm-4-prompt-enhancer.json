@@ -1,149 +1,26 @@
 {
-  "last_node_id": 8,
-  "last_link_id": 7,
+  "last_node_id": 10,
+  "last_link_id": 11,
   "nodes": [
-    {
-      "id": 2,
-      "type": "LoadImage",
-      "pos": {
-        "0": 290,
-        "1": 180
-      },
-      "size": {
-        "0": 315,
-        "1": 314
-      },
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            5
-          ]
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadImage"
-      },
-      "widgets_values": [
-        "Tokyo-Shibuya-neon-lights.png",
-        "image"
-      ]
-    },
-    {
-      "id": 8,
-      "type": "String Literal",
-      "pos": {
-        "0": 280,
-        "1": 580
-      },
-      "size": [
-        310,
-        190
-      ],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            7
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "String Literal"
-      },
-      "widgets_values": [
-        "Tokyo night, busy street, neon lights"
-      ]
-    },
-    {
-      "id": 7,
-      "type": "GLM-4 Prompt Enhancer",
-      "pos": {
-        "0": 780,
-        "1": 380
-      },
-      "size": [
-        315,
-        250
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 5,
-          "shape": 7
-        },
-        {
-          "name": "prompt",
-          "type": "STRING",
-          "link": 7,
-          "widget": {
-            "name": "prompt"
-          }
-        }
-      ],
-      "outputs": [
-        {
-          "name": "enhanced_prompt",
-          "type": "STRING",
-          "links": [
-            6
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "GLM-4 Prompt Enhancer"
-      },
-      "widgets_values": [
-        "THUDM/glm-4v-9b",
-        "bf16",
-        "",
-        200,
-        0.1,
-        40,
-        0.7,
-        1.1,
-        true
-      ]
-    },
     {
       "id": 3,
       "type": "ShowText|pysssss",
       "pos": {
-        "0": 1230,
-        "1": 380
+        "0": 1150,
+        "1": 130
       },
-      "size": [
-        390,
-        250
-      ],
+      "size": {
+        "0": 390,
+        "1": 250
+      },
       "flags": {},
-      "order": 3,
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
           "name": "text",
           "type": "STRING",
-          "link": 6,
+          "link": 8,
           "widget": {
             "name": "text"
           }
@@ -164,42 +41,211 @@
         "",
         "Tokyo nights come alive along this bustling street as crowds navigate between towering buildings adorned with vibrant neon signs casting electric hues across the scene. Amidst the sea of illuminated advertisements for everything from electronics shops to karaoke joints, individuals move purposefully through the urban labyrinth."
       ]
+    },
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": {
+        "0": 390,
+        "1": 290
+      },
+      "size": {
+        "0": 315,
+        "1": 314
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            10
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "Tokyo-Shibuya-neon-lights.png",
+        "image"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "String Literal",
+      "pos": {
+        "0": 390,
+        "1": 660
+      },
+      "size": {
+        "0": 310,
+        "1": 190
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "String Literal"
+      },
+      "widgets_values": [
+        "Tokyo night, busy street, neon lights"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "GLM-4 Model Loader",
+      "pos": {
+        "0": 390,
+        "1": 130
+      },
+      "size": {
+        "0": 315,
+        "1": 106
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "GLMPipeline",
+          "type": "GLMPipeline",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GLM-4 Model Loader"
+      },
+      "widgets_values": [
+        "THUDM/glm-4v-9b",
+        "bf16",
+        "8"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "GLM-4 Prompt Enhancer",
+      "pos": {
+        "0": 760,
+        "1": 130
+      },
+      "size": [
+        342.5999755859375,
+        222
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "GLMPipeline",
+          "type": "GLMPipeline",
+          "link": 11
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 10,
+          "shape": 7
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "link": 9,
+          "widget": {
+            "name": "prompt"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "enhanced_prompt",
+          "type": "STRING",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GLM-4 Prompt Enhancer"
+      },
+      "widgets_values": [
+        "",
+        200,
+        0.1,
+        40,
+        0.7,
+        1.1,
+        true
+      ]
     }
   ],
   "links": [
     [
-      5,
-      2,
-      0,
-      7,
-      0,
-      "IMAGE"
-    ],
-    [
-      6,
-      7,
+      8,
+      9,
       0,
       3,
       0,
       "STRING"
     ],
     [
-      7,
+      9,
       8,
       0,
-      7,
-      1,
+      9,
+      2,
       "STRING"
+    ],
+    [
+      10,
+      2,
+      0,
+      9,
+      1,
+      "IMAGE"
+    ],
+    [
+      11,
+      10,
+      0,
+      9,
+      0,
+      "GLMPipeline"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.7513148009015778,
+      "scale": 0.8264462809917361,
       "offset": [
-        303.88546711012,
-        365.50962697081405
+        272.52704486550704,
+        56.38898669179459
       ]
     }
   },
