@@ -53,6 +53,10 @@ The `ModelLoader` class is responsible for loading GLM-4 models. It supports var
 - **precision**: Precision type (`fp16`, `fp32`, `bf16`). `THUDM/glm-4v-9b` requires bf16 and will be runned in 8-bit quant by default.
 - **quantization**: Set the number of bits for quantization (4, 8, 16).
 
+#### Output
+
+- **GLM4Pipeline**: The GLM-4 pipeline.
+
 ### GLM-4 Prompt Enhancer
 
 Enhances a given prompt using the GLM-4 model.
