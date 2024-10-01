@@ -1,9 +1,13 @@
 # ComfyUI GLM-4 Wrapper
 
 This repository contains custom nodes for ComfyUI, specifically designed to enhance and infer prompts using the GLM-4 model on local hardware.
+
 The nodes leverage the GLM-4 model to generate detailed and descriptive image/video captions or enhance user-provided prompts, among regular inference.
+
 Prompts and inference can be combined with image if `THUDM/glm-4v-9b` model is used.
+
 All models will be downloaded automatically through HuggingFace.co. `THUDM/glm-4v-9b` will take ~26 GB of hdd space and `THUDM/glm-4-9b` will take ~18 GB of hdd space.
+
 The nodes containes an "unload_model" option which frees up VRAM space and makes it suitable for workflows that requires larger VRAM space, like FLUX.1-dev and CogVideoX-5b(-I2V).
 
 The prompt enhancer is based on this example from THUDM [convert_demo.py](https://github.com/THUDM/CogVideo/blob/main/inference/convert_demo.py).
