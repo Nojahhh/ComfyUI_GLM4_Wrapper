@@ -9,36 +9,41 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from PIL import Image
 import logging
 import numpy as np
+import gc
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
 
 class GLMPipeline:
-    def __init__(self):
-        self.tokenizer = None
-        self.transformer = None
-        self.model_name = None
-        self.precision = None
-        self.quantization = None
-        self.parent = None
-    
-    def clearCache(self):
-        self.tokenizer = None
-        self.transformer = None
-        self.model_name = None
-        self.precision = None
-        self.quantization = None
+  def __init__(self):
+    self.tokenizer = None
+    self.transformer = None
+    self.model_name = None
+    self.precision = None
+    self.quantization = None
+    self.parent = None
+
+  def clearCache(self):
+    if self.transformer:
+      self.transformer.cpu()
+      del self.transformer
+    torch.cuda.synchronize()
+    self.tokenizer = None
+    self.transformer = None
+    self.model_name = None
+    self.precision = None
+    self.quantization = None
 
 class GLM4ModelLoader:
 
   def __init__(self):
-      self.model = None
-      self.precision = None
-      self.quantization = None
-      self.pipeline = GLMPipeline()
-      self.pipeline.parent = self
-      pass
+    self.model = None
+    self.precision = None
+    self.quantization = None
+    self.pipeline = GLMPipeline()
+    self.pipeline.parent = self
+    pass
 
   @classmethod
   def INPUT_TYPES(s):
@@ -66,44 +71,45 @@ class GLM4ModelLoader:
   FUNCTION = "gen"
 
   def loadCheckPoint(self):
-      # Initialize the device and empty cache
-      device = mm.get_torch_device()
-      mm.soft_empty_cache()
-      
-      # Clear cache
-      if self.pipeline != None:
-        self.pipeline.clearCache()
+    # Initialize the device and empty cache
+    device = mm.get_torch_device()
+    mm.soft_empty_cache()
 
-      # Set precision type
-      dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[self.precision]
-
-      log.info(f"Loading GLM-4 model: {self.model}")
-
-      # Load the tokenizer and model with specified precision, and trust remote code
-      tokenizer = AutoTokenizer.from_pretrained(self.model, trust_remote_code=True)
-
-      if(self.model == "THUDM/glm-4v-9b"):
-        # Load the model with low_cpu_mem_usage and trust_remote_code
-        if(self.quantization == "8"):
-          log.info(f"Loading GLM-4 model in 8-bit quantization mode")
-          transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
-        elif(self.quantization == "4"):
-          log.info(f"Loading GLM-4 model in 4-bit quantization mode")
-          transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_4bit=True))
-        else:
-          log.info(f"Loading GLM-4 model in default mode")
-          transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16).to(device)
-      else:
-        transformer = AutoModelForCausalLM.from_pretrained(self.model, device_map="auto", trust_remote_code=True).to(dtype).to(device)
-
-      self.pipeline.tokenizer = tokenizer
-      self.pipeline.transformer = transformer
-      self.pipeline.model_name = self.model
-  
-  def clearCache(self):
+    # Clear cache
     if self.pipeline != None:
       self.pipeline.clearCache()
-      mm.soft_empty_cache()
+
+    # Set precision type
+    dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[self.precision]
+
+    log.info(f"Loading GLM-4 model: {self.model}")
+
+    # Load the tokenizer and model with specified precision, and trust remote code
+    tokenizer = AutoTokenizer.from_pretrained(self.model, trust_remote_code=True)
+
+    if(self.model == "THUDM/glm-4v-9b"):
+      # Load the model with low_cpu_mem_usage and trust_remote_code
+      if(self.quantization == "8"):
+        log.info(f"Loading GLM-4 model in 8-bit quantization mode")
+        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
+      elif(self.quantization == "4"):
+        log.info(f"Loading GLM-4 model in 4-bit quantization mode")
+        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_4bit=True))
+      else:
+        log.info(f"Loading GLM-4 model in default mode")
+        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16).to(device)
+    else:
+      transformer = AutoModelForCausalLM.from_pretrained(self.model, device_map="auto", trust_remote_code=True).to(dtype).to(device)
+    transformer.eval()
+
+    self.pipeline.tokenizer = tokenizer
+    self.pipeline.transformer = transformer
+    self.pipeline.model_name = self.model
+  
+  def clearCache(self):
+    # if self.pipeline != None:
+    self.pipeline.clearCache()
+    # mm.soft_empty_cache()
 
   def gen(self,model,precision,quantization):
     if self.model == None or self.model != model or self.pipeline == None:
@@ -139,13 +145,12 @@ class GLM4PromptEnhancer:
   CATEGORY = "GLM4Wrapper"
 
   def enhance_prompt(self, GLMPipeline, prompt, max_tokens=200, temperature=0.1, top_k=40, top_p=0.7, repetition_penalty=1.1, image=None, unload_model=True):
+    # Empty cache
+    mm.soft_empty_cache()
 
     # Load the model if it is not loaded
     if GLMPipeline.tokenizer == None :
       GLMPipeline.parent.loadCheckPoint()
-
-    # Empty cache
-    mm.soft_empty_cache()
 
     # Write the system prompt for enhancing the prompt
     sys_prompt_t2v = """You are part of a team of bots that creates videos. You work with an assistant bot that will draw anything you say in square brackets.
@@ -195,6 +200,7 @@ class GLM4PromptEnhancer:
       inputs = GLMPipeline.tokenizer.apply_chat_template(messages,
         add_generation_prompt=True, tokenize=True, return_tensors="pt",
         return_dict=True)
+
     else:
 
       # Add an explicit instruction to enhance the prompt
@@ -242,8 +248,10 @@ class GLM4PromptEnhancer:
     inputs = {key: value.to(GLMPipeline.transformer.device) for key, value in inputs.items()}
 
     # Generate enhanced text
-    outputs = GLMPipeline.transformer.generate(**inputs, max_new_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty)
-    enhanced_text = GLMPipeline.tokenizer.decode(outputs[0], skip_special_tokens=True)
+    with torch.no_grad():
+      GLMPipeline.transformer.eval()
+      outputs = GLMPipeline.transformer.generate(**inputs, max_new_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty)
+      enhanced_text = GLMPipeline.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     # Remove the system prompt from the output text
     for message in messages:
@@ -270,6 +278,9 @@ class GLM4PromptEnhancer:
 
     if unload_model == True:
       GLMPipeline.parent.clearCache()
+      torch.cuda.empty_cache()
+      torch.cuda.ipc_collect()
+      gc.collect()
     
     return (enhanced_text,)
   
@@ -300,13 +311,12 @@ class GLM4Inference:
   CATEGORY = "GLM4Wrapper"
 
   def infer(self, GLMPipeline, system_prompt, user_prompt, max_tokens=250, temperature=0.7, top_k=50, top_p=1, repetition_penalty=1.0, image=None, unload_model=True):
+    # Empty cache
+    mm.soft_empty_cache()
 
     # Load the model if it is not loaded
     if GLMPipeline.tokenizer == None :
       GLMPipeline.parent.loadCheckPoint()
-
-    # Empty cache
-    mm.soft_empty_cache()
 
     # # Check if the model is GLM-4v-9b for image to video captioning
     if GLMPipeline.model_name == "THUDM/glm-4v-9b":
@@ -334,8 +344,10 @@ class GLM4Inference:
     inputs = {key: value.to(GLMPipeline.transformer.device) for key, value in inputs.items()}
 
     # Generate enhanced text
-    outputs = GLMPipeline.transformer.generate(**inputs, max_new_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty)
-    output_text = GLMPipeline.tokenizer.decode(outputs[0], skip_special_tokens=True)
+    with torch.no_grad():
+      GLMPipeline.transformer.eval()
+      outputs = GLMPipeline.transformer.generate(**inputs, max_new_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty)
+      output_text = GLMPipeline.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     # Remove the system prompt from the output text
     for message in messages:
@@ -343,6 +355,9 @@ class GLM4Inference:
 
     if unload_model == True:
       GLMPipeline.parent.clearCache()
+      torch.cuda.empty_cache()
+      torch.cuda.ipc_collect()
+      gc.collect()
 
     return (output_text,)
 
