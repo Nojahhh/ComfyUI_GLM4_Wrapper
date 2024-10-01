@@ -18,7 +18,7 @@ class GLMPipeline:
     def __init__(self):
         self.tokenizer = None
         self.transformer = None
-        self.model = None
+        self.model_name = None
         self.precision = None
         self.quantization = None
         self.parent = None
@@ -26,7 +26,7 @@ class GLMPipeline:
     def clearCache(self):
         self.tokenizer = None
         self.transformer = None
-        self.model = None
+        self.model_name = None
         self.precision = None
         self.quantization = None
 
@@ -98,6 +98,7 @@ class GLM4ModelLoader:
 
       self.pipeline.tokenizer = tokenizer
       self.pipeline.transformer = transformer
+      self.pipeline.model_name = self.model
   
   def clearCache(self):
     if self.pipeline != None:
@@ -181,7 +182,7 @@ class GLM4PromptEnhancer:
     """
 
     # Check if the model is GLM-4v-9b for image to video captioning
-    if(GLMPipeline.model == "THUDM/glm-4v-9b"):
+    if(GLMPipeline.model_name == "THUDM/glm-4v-9b"):
 
       # Add an explicit instruction to enhance the prompt
       if image is not None:
@@ -299,11 +300,16 @@ class GLM4Inference:
   CATEGORY = "GLM4Wrapper"
 
   def infer(self, GLMPipeline, system_prompt, user_prompt, max_tokens=250, temperature=0.7, top_k=50, top_p=1, repetition_penalty=1.0, image=None, unload_model=True):
+
+    # Load the model if it is not loaded
+    if GLMPipeline.tokenizer == None :
+      GLMPipeline.parent.loadCheckPoint()
+
     # Empty cache
     mm.soft_empty_cache()
 
     # # Check if the model is GLM-4v-9b for image to video captioning
-    if GLMPipeline.model == "THUDM/glm-4v-9b":
+    if GLMPipeline.model_name == "THUDM/glm-4v-9b":
 
       # Add an explicit instruction to enhance the prompt
       if image is not None:
