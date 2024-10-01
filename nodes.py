@@ -30,7 +30,7 @@ class GLMPipeline:
         self.precision = None
         self.quantization = None
 
-class ModelLoader:
+class GLM4ModelLoader:
 
   def __init__(self):
       self.model = None
@@ -338,7 +338,7 @@ class GLM4Inference:
 
 # Node class mappings and display names
 NODE_CLASS_MAPPINGS = {
-  "GLM-4 Model Loader": ModelLoader,
+  "GLM-4 Model Loader": GLM4ModelLoader,
   "GLM-4 Prompt Enhancer": GLM4PromptEnhancer,
   "GLM-4 Inferencing": GLM4Inference,
 }

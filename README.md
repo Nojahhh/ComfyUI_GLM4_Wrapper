@@ -14,6 +14,7 @@ Hope you will enjoy your enhanced prompts and inference capabilities of these mo
 
 ## Features
 
+- **Model Loader**: Load various GLM-4 models with different precision and quantization settings.
 - **GLM-4 Prompt Enhancer**: Enhances base prompts using the GLM-4 model.
 - **GLM-4 Inferencing**: Performs inference using various GLM-4 models.
 
@@ -33,10 +34,20 @@ Hope you will enjoy your enhanced prompts and inference capabilities of these mo
   ```
 4. Install the required dependencies:
   ```bash
-  pip install -r requirements.txt
+  ../../python_embeded python.exe -m pip install -r requirements.txt
   ```
 
 ## Usage
+
+### Model Loader
+
+The `ModelLoader` class is responsible for loading GLM-4 models. It supports various models and precision settings.
+
+#### Input Types
+
+- **model**: Choose the GLM-4 model to load. Model will download automatically from HuggingFace.co
+- **precision**: Precision type (`fp16`, `fp32`, `bf16`). `THUDM/glm-4v-9b` requires bf16 and will be runned in 8-bit quant by default.
+- **quantization**: Set the number of bits for quantization (4, 8, 16).
 
 ### GLM-4 Prompt Enhancer
 
@@ -44,8 +55,7 @@ Enhances a given prompt using the GLM-4 model.
 
 #### Input Parameters
 
-- **model**: Choose from available GLM-4 models. Model will download automatically from HuggingFace.co.
-- **precision**: Precision type (`fp16`, `fp32`, `bf16`). `THUDM/glm-4v-9b` requires bf16 and will be runned in 4-bit quant by default.
+- **GLMPipeline**: Provide a GLM-4 pipeline.
 - **prompt**: Base prompt to enhance.
 - **max_tokens**: Maximum number of output tokens.
 - **temperature**: Temperature parameter for sampling.
@@ -65,8 +75,7 @@ Performs inference using the GLM-4 model.
 
 #### Input Parameters
 
-- **model**: Choose from available GLM-4 models.
-- **precision**: Precision type (`fp16`, `fp32`, `bf16`). `THUDM/glm-4v-9b` requires bf16 and will be runned in 4-bit quant by default.
+- **GLMPipeline**: Provide a GLM-4 pipeline.
 - **system_prompt**: System prompt for inferencing.
 - **user_prompt**: User prompt for inferencing.
 - **max_tokens**: Maximum number of output tokens.
@@ -83,11 +92,13 @@ Performs inference using the GLM-4 model.
 
 ## Node Class Mappings
 
+- **GLM-4 Model Loader**: `GLM4ModelLoader`
 - **GLM-4 Prompt Enhancer**: `GLM4PromptEnhancer`
 - **GLM-4 Inferencing**: `GLM4Inference`
 
 ## Node Display Name Mappings
 
+- **GLM-4ModelLoader**: "GLM-4 Model Loader"
 - **GLM-4PromptEnhancer**: "GLM-4 Prompt Enhancer"
 - **GLM-4Inference**: "GLM-4 Inferencing"
 
@@ -105,7 +116,7 @@ The following GLM-4 models are supported by this wrapper:
 | `THUDM/LongWriter-glm4-9b`  | 9B    | `fp16`, `fp32`, `bf16`|
 
 ### Notes:
-- The `THUDM/glm-4v-9b` model requires `bf16` precision with INT4 quantization due to its size and the typical VRAM limitations of consumer-grade GPUs (often 24GB or less).
+- The `THUDM/glm-4v-9b` model requires `bf16` precision and is default 8-bit quantization due to its size and the typical VRAM limitations of consumer-grade GPUs (often 24GB or less).
 - Only `THUDM/glm-4v-9b` model is able to handle image input.
 
 ## Example Usage
@@ -115,19 +126,23 @@ Below is an example of how to use the GLM-4 Prompt Enhancer and GLM-4 Inferencin
 ### GLM-4 Prompt Enhancer
 
 ```python
-from comfyui_glm4_wrapper import GLM4PromptEnhancer
+from comfyui_glm4_wrapper import GLM4ModelLoader, GLM4PromptEnhancer, GLM4Inference
 
+# Load the model
+model_loader = GLM4ModelLoader()
+pipeline = model_loader.gen(model="THUDM/glm-4v-9b", precision="bf16", quantization="8")[0]
+
+# Enhance the prompt
 enhancer = GLM4PromptEnhancer()
 enhanced_prompt = enhancer.enhance_prompt(
-  model="THUDM/glm-4v-9b",
-  precision="bf16",
+  GLMPipeline=pipeline,
   prompt="A beautiful sunrise over the mountains",
   max_tokens=200,
   temperature=0.1,
   top_k=40,
   top_p=0.7,
   repetition_penalty=1.1,
-  image=None, # PIL Image
+  image=None,  # PIL Image
   unload_model=True
 )
 print(enhanced_prompt)
@@ -136,12 +151,16 @@ print(enhanced_prompt)
 ### GLM-4 Inferencing
 
 ```python
-from comfyui_glm4_wrapper import GLM4Inference
+from comfyui_glm4_wrapper import GLM4ModelLoader, GLM4PromptEnhancer, GLM4Inference
 
+# Load the model
+model_loader = GLM4ModelLoader()
+pipeline = model_loader.gen(model="THUDM/glm-4v-9b", precision="bf16", quantization="8")[0]
+
+# Perform inference
 inference = GLM4Inference()
 output_text = inference.infer(
-  model="THUDM/glm-4-9b",
-  precision="fp16",
+  GLMPipeline=pipeline,
   system_prompt="Describe the scene in detail:",
   user_prompt="A bustling city street at night",
   max_tokens=250,
