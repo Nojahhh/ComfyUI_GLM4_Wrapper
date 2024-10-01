@@ -25,10 +25,10 @@ class GLMPipeline:
     self.parent = None
 
   def clearCache(self):
+    torch.cuda.synchronize()
     if self.transformer:
       self.transformer.cpu()
       del self.transformer
-    torch.cuda.synchronize()
     self.tokenizer = None
     self.transformer = None
     self.model_name = None
