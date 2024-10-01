@@ -116,7 +116,7 @@ The following GLM-4 models are supported by this wrapper:
 
 | Model Name                  | Size  | Recommended Precision |
 |-----------------------------|-------|-----------------------|
-| `THUDM/glm-4v-9b`           | 9B    | `bf16` (INT4 quant)   |
+| `THUDM/glm-4v-9b`           | 9B    | `bf16` (4/8-bit quant)|
 | `THUDM/glm-4-9b`            | 9B    | `fp16`, `fp32`, `bf16`|
 | `THUDM/glm-4-9b-chat`       | 9B    | `fp16`, `fp32`, `bf16`|
 | `THUDM/glm-4-9b-chat-1m`    | 9B    | `fp16`, `fp32`, `bf16`|
