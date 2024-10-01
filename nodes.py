@@ -14,8 +14,40 @@ import numpy as np
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
 
-# Class for enhancing prompts using GLM-4
-class GLM4PromptEnhancer:
+class GLMPipeline:
+    def __init__(self):
+        # self.clip_model = None
+        # self.clip_processor =None
+        self.tokenizer = None
+        self.transformer = None
+        self.model = None
+        self.precision = None
+        self.quantization = None
+        # self.text_model = None
+        # self.image_adapter = None
+        self.parent = None
+    
+    def clearCache(self):
+        # self.clip_model = None
+        # self.clip_processor =None
+        self.tokenizer = None
+        self.transformer = None
+        self.model = None
+        self.precision = None
+        self.quantization = None
+        # self.text_model = None
+        # self.image_adapter = None 
+
+class ModelLoader:
+
+  def __init__(self):
+      self.model = None
+      self.precision = None
+      self.quantization = None
+      self.pipeline = GLMPipeline()
+      self.pipeline.parent = self
+      pass
+
   @classmethod
   def INPUT_TYPES(s):
     return {
@@ -23,21 +55,101 @@ class GLM4PromptEnhancer:
         "model": (
           [
             "THUDM/glm-4v-9b",
-            "THUDM/glm-4-9b"
+            "THUDM/glm-4-9b",
+            "THUDM/glm-4-9b-chat",
+            "THUDM/glm-4-9b-chat-1m",
+            "THUDM/LongCite-glm4-9b",
+            "THUDM/LongWriter-glm4-9b"
           ],
+          {"tooltip": "Choose the GLM-4 model to load. Only glm-4v-9b model supports image input."}
         ),
         "precision": (["fp16", "fp32", "bf16"],
-          {"default": "bf16", "tooltip": "Recommended precision for GLM-4 model. bf16 required for glm-4v-9b (INT4 quant)."}),
+          {"default": "bf16", "tooltip": "Recommended precision for GLM-4 model. bf16 required for glm-4v-9b (INT4/8 quant)."}),
+        "quantization": (["4", "8", "16"], {"default": "8", "tooltip": "Choose the number of bits for quantization. Only supported for glm-4v-9b model."}),
+      }
+    }
+
+  CATEGORY = "GLM4Wrapper"
+  RETURN_TYPES = ("GLMPipeline",)
+  FUNCTION = "gen"
+
+  def loadCheckPoint(self):
+      # Initialize the device and empty cache
+      device = mm.get_torch_device()
+      mm.soft_empty_cache()
+      
+      # Clear cache
+      if self.pipeline != None:
+        self.pipeline.clearCache() 
+
+      # Set precision type
+      dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[self.precision]
+
+      log.info(f"Loading GLM-4 model: {self.model}")
+
+      # Load the tokenizer and model with specified precision, and trust remote code
+      tokenizer = AutoTokenizer.from_pretrained(self.model, trust_remote_code=True)
+
+      if(self.model == "THUDM/glm-4v-9b"):
+        # Load the model with low_cpu_mem_usage and trust_remote_code
+        if(self.quantization == "8"):
+          log.info(f"Loading GLM-4 model in 8-bit quantization mode")
+          transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
+        elif(self.quantization == "4"):
+          log.info(f"Loading GLM-4 model in 4-bit quantization mode")
+          transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_4bit=True))
+        else:
+          log.info(f"Loading GLM-4 model in default mode")
+          transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16).to(device)
+      else:
+        transformer = AutoModelForCausalLM.from_pretrained(self.model, device_map="auto", trust_remote_code=True).to(dtype).to(device)
+
+      # self.pipeline.clip_model = clip_model
+      # self.pipeline.clip_processor = clip_processor
+      self.pipeline.tokenizer = tokenizer
+      self.pipeline.transformer = transformer
+      # self.pipeline.text_model = text_model
+      # self.pipeline.image_adapter = adjusted_adapter
+  
+  def clearCache(self):
+    if self.pipeline != None:
+      self.pipeline.clearCache()
+
+  def gen(self,model,precision,quantization):
+    if self.model == None or self.model != model or self.pipeline == None:
+      self.model = model
+      self.precision = precision
+      self.quantization = quantization
+      self.loadCheckPoint()
+    return (self.pipeline,)
+
+# Class for enhancing prompts using GLM-4
+class GLM4PromptEnhancer:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "GLMPipeline": ("GLMPipeline", {"tooltip": "Provide a GLM-4 pipeline."}),
+        # "model": (
+        #   [
+        #     "THUDM/glm-4v-9b",
+        #     "THUDM/glm-4-9b"
+        #   ],
+        # ),
+        # "precision": (["fp16", "fp32", "bf16"],
+          # {"default": "bf16", "tooltip": "Recommended precision for GLM-4 model. bf16 required for glm-4v-9b (INT4 quant)."}),
         "prompt": ("STRING", {"forceInput": True, "tooltip": "Provide a base prompt to enhance. Can be empty if image is provided and glm-4v-9b model is chosen."}),
+        # "quantization": (["4", "8", "16"], {"default": "8", "tooltip": "Choose the number of bits for quantization. Only supported for glm-4v-9b model."}),
         "max_tokens": ("INT", {"default": 200, "tooltip": "Limit the number of output tokens"}),
         "temperature": ("FLOAT", {"default": 0.1, "tooltip": "Temperature parameter for sampling"}),
         "top_k": ("INT", {"default": 40, "tooltip": "Top-k parameter for sampling"}),
         "top_p": ("FLOAT", {"default": 0.7, "tooltip": "Top-p parameter for sampling"}),
         "repetition_penalty": ("FLOAT", {"default": 1.1, "tooltip": "Repetition penalty for sampling"}),
+        "unload_model": ("BOOLEAN", {"default": True, "tooltip": "Unload the model after use to free up memory"}),
       },
       "optional": {
         "image": ("IMAGE", {"tooltip": "Provide an image to enhance the prompt. Only supported for glm-4v-9b model."}),
-        "unload_model": ("BOOLEAN", {"default": True, "tooltip": "Unload the model after use to free up memory"}),
+        # "unload_model": ("BOOLEAN", {"default": True, "tooltip": "Unload the model after use to free up memory"}),
       }
     }
 
@@ -46,18 +158,19 @@ class GLM4PromptEnhancer:
   FUNCTION = "enhance_prompt"
   CATEGORY = "GLM4Wrapper"
 
-  def enhance_prompt(self, model, precision, prompt, max_tokens=200, temperature=0.1, top_k=40, top_p=0.7, repetition_penalty=1.1, image=None, unload_model=True):
+  def enhance_prompt(self, GLMPipeline, prompt, max_tokens=200, temperature=0.1, top_k=40, top_p=0.7, repetition_penalty=1.1, image=None, unload_model=True):
+    print('enhance_prompt')
     # Initialize the device and empty cache
-    device = mm.get_torch_device()
+    # device = mm.get_torch_device()
     mm.soft_empty_cache()
 
     # Set precision type
-    dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision]
+    # dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision]
 
-    log.info(f"Loading GLM-4 model: {model}")
+    # log.info(f"Loading GLM-4 model: {model}")
 
     # Load the tokenizer and model with specified precision, and trust remote code
-    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
+    # tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
 
     # Write the system prompt for enhancing the prompt
     sys_prompt_t2v = """You are part of a team of bots that creates videos. You work with an assistant bot that will draw anything you say in square brackets.
@@ -79,6 +192,10 @@ class GLM4PromptEnhancer:
 
     **Note**: The input image is the first frame of the video, and the output video caption should describe the motion starting from the current image. User input is optional and can be empty. 
 
+    **Note**: Be assertive and confident in your descriptions. Don't fall back to "perhaps" or "maybe". Avoid "suggests" or "implies" unless it's a clear-cut case.
+
+    **Note**: Don't use too rapid or too slow motion. Keep the motion at a moderate pace.
+
     **Note**: Don't contain camera transitions!!! Don't contain screen switching!!! Don't contain perspective shifts !!!
 
     **Answering Style**:
@@ -88,11 +205,20 @@ class GLM4PromptEnhancer:
 
     user input:
     """
-    
+
+    # log.info(f"Quantization: {quantization}")
     # Check if the model is GLM-4v-9b for image to video captioning
-    if(model == "THUDM/glm-4v-9b"):
-      # Load the model with low_cpu_mem_usage and trust_remote_code
-      transformer = AutoModelForCausalLM.from_pretrained(model, low_cpu_mem_usage=True, trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_4bit=True))
+    if(GLMPipeline.model == "THUDM/glm-4v-9b"):
+      # # Load the model with low_cpu_mem_usage and trust_remote_code
+      # if(quantization == "8"):
+      #   log.info(f"Loading GLM-4 model in 8-bit quantization mode")
+      #   transformer = AutoModelForCausalLM.from_pretrained(model, low_cpu_mem_usage=True, trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
+      # elif(quantization == "4"):
+      #   log.info(f"Loading GLM-4 model in 4-bit quantization mode")
+      #   transformer = AutoModelForCausalLM.from_pretrained(model, low_cpu_mem_usage=True, trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_4bit=True))
+      # else:
+      #   log.info(f"Loading GLM-4 model in default mode")
+      #   transformer = AutoModelForCausalLM.from_pretrained(model, low_cpu_mem_usage=True, trust_remote_code=True, torch_dtype=torch.bfloat16).to(device)
 
       # Add an explicit instruction to enhance the prompt
       if image is not None:
@@ -102,11 +228,11 @@ class GLM4PromptEnhancer:
         messages=[{"role": "user", "content": f"{sys_prompt_t2v} {prompt}"}]
 
       # Tokenize the input text with the instruction
-      inputs = tokenizer.apply_chat_template(messages,
+      inputs = GLMPipeline.tokenizer.apply_chat_template(messages,
         add_generation_prompt=True, tokenize=True, return_tensors="pt",
         return_dict=True)
     else:
-      transformer = AutoModelForCausalLM.from_pretrained(model, trust_remote_code=True).to(dtype).to(device)
+      # transformer = AutoModelForCausalLM.from_pretrained(model, trust_remote_code=True).to(dtype).to(device)
 
       messages=[
         {"role": "system", "content": f"{sys_prompt_t2v}"},
@@ -141,7 +267,7 @@ class GLM4PromptEnhancer:
       ]
 
       # Tokenize the input text with the instruction
-      inputs = tokenizer.apply_chat_template(messages, 
+      inputs = GLMPipeline.tokenizer.apply_chat_template(messages, 
         add_generation_prompt=True,
         tokenize=True,
         return_tensors="pt",
@@ -149,11 +275,11 @@ class GLM4PromptEnhancer:
         truncation=True)
 
     # Move inputs to the same device as the transformer
-    inputs = {key: value.to(transformer.device) for key, value in inputs.items()}
+    inputs = {key: value.to(GLMPipeline.transformer.device) for key, value in inputs.items()}
 
     # Generate enhanced text
-    outputs = transformer.generate(**inputs, max_new_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty)
-    enhanced_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    outputs = GLMPipeline.transformer.generate(**inputs, max_new_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty)
+    enhanced_text = GLMPipeline.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     # Remove the system prompt from the output text
     for message in messages:
@@ -179,11 +305,14 @@ class GLM4PromptEnhancer:
       enhanced_text = enhanced_text.split("\n")[0]
 
     # Unload the model and tokenizer from memory
-    if unload_model:
-      transformer.cpu()
-      del transformer
-      del tokenizer
-      mm.soft_empty_cache()
+    # if unload_model:
+    #   transformer.cpu()
+    #   del transformer
+    #   del tokenizer
+    #   mm.soft_empty_cache()
+
+    if unload_model == True:
+      GLMPipeline.parent.clearCache()
     
     return (enhanced_text,)
   
@@ -193,20 +322,22 @@ class GLM4Inference:
   def INPUT_TYPES(s):
     return {
       "required": {
-        "model": (
-          [
-            "THUDM/glm-4v-9b",
-            "THUDM/glm-4-9b",
-            "THUDM/glm-4-9b-chat",
-            "THUDM/glm-4-9b-chat-1m",
-            "THUDM/LongCite-glm4-9b",
-            "THUDM/LongWriter-glm4-9b"
-          ],
-        ),
-        "precision": (["fp16", "fp32", "bf16"],
-          {"default": "bf16", "tooltip": "Recommended precision for GLM-4 model. bf16 required for glm-4v-9b (INT4 quant)."}),
+        "GLMPipeline": ("GLMPipeline", {"tooltip": "Provide a GLM-4 pipeline."}),
         "system_prompt": ("STRING", {"default":"", "multiline": True, "tooltip": "Provide a system prompt for inferencing. (Instructions for the model)"}),
         "user_prompt": ("STRING", {"default":"", "multiline": True, "tooltip": "Provide a user prompt for inferencing"}),
+        # "model": (
+        #   [
+        #     "THUDM/glm-4v-9b",
+        #     "THUDM/glm-4-9b",
+        #     "THUDM/glm-4-9b-chat",
+        #     "THUDM/glm-4-9b-chat-1m",
+        #     "THUDM/LongCite-glm4-9b",
+        #     "THUDM/LongWriter-glm4-9b"
+        #   ],
+        # ),
+        # "precision": (["fp16", "fp32", "bf16"],
+        #   {"default": "bf16", "tooltip": "Recommended precision for GLM-4 model. bf16 required for glm-4v-9b."}),
+        # "quantization": (["4", "8", "16"], {"default": "8", "tooltip": "Choose the number of bits for quantization. Only supported for glm-4v-9b model."}),
         "max_tokens": ("INT", {"default": 250, "tooltip": "Limit the number of output tokens"}),
         "temperature": ("FLOAT", {"default": 0.7, "tooltip": "Temperature parameter for sampling"}),
         "top_k": ("INT", {"default": 50, "tooltip": "Top-k parameter for sampling"}),
@@ -224,23 +355,29 @@ class GLM4Inference:
   FUNCTION = "infer"
   CATEGORY = "GLM4Wrapper"
 
-  def infer(self, model, precision, system_prompt, user_prompt, max_tokens=250, temperature=0.7, top_k=50, top_p=1, repetition_penalty=1.0, image=None, unload_model=True):
+  def infer(self, GLMPipeline, system_prompt, user_prompt, max_tokens=250, temperature=0.7, top_k=50, top_p=1, repetition_penalty=1.0, image=None, unload_model=True):
     # Initialize the device and empty cache
     device = mm.get_torch_device()
     mm.soft_empty_cache()
 
-    # Set precision type
-    dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision]
+    # # Set precision type
+    # dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision]
 
-    log.info(f"Loading GLM-4 model: {model}")
+    # log.info(f"Loading GLM-4 model: {model}")
 
-    # Load the tokenizer and model with specified precision, and trust remote code
-    tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
+    # # Load the tokenizer and model with specified precision, and trust remote code
+    # tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
 
-    # Check if the model is GLM-4v-9b for image to video captioning
-    if model == "THUDM/glm-4v-9b":
-      # Load the model with low_cpu_mem_usage and trust_remote_code
-      transformer = AutoModelForCausalLM.from_pretrained(model, low_cpu_mem_usage=True, trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_4bit=True))
+    # # Check if the model is GLM-4v-9b for image to video captioning
+    if GLMPipeline.model == "THUDM/glm-4v-9b":
+    #   # Load the model with low_cpu_mem_usage and trust_remote_code
+    #   if(quantization == "8"):
+    #     transformer = AutoModelForCausalLM.from_pretrained(model, low_cpu_mem_usage=True, trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
+    #   elif(quantization == "4"):
+    #     transformer = AutoModelForCausalLM.from_pretrained(model, low_cpu_mem_usage=True, trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_4bit=True))
+    #   else:
+    #     transformer = AutoModelForCausalLM.from_pretrained(model, low_cpu_mem_usage=True, trust_remote_code=True, torch_dtype=torch.bfloat16).to(device)
+
       # Add an explicit instruction to enhance the prompt
       if image is not None:
         image = Image.fromarray(np.clip(255.0 * image.cpu().numpy().squeeze(), 0, 255).astype(np.uint8)).convert("RGB")
@@ -249,44 +386,51 @@ class GLM4Inference:
         messages = [{"role": "user", "content": f"{system_prompt} {user_prompt}"}]
 
       # Tokenize the input text with the instruction
-      inputs = tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=True, return_tensors="pt", return_dict=True)
+      inputs = GLMPipeline.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=True, return_tensors="pt", return_dict=True)
     else:
-      transformer = AutoModelForCausalLM.from_pretrained(model, trust_remote_code=True).to(dtype).to(device)
+      # Load the model with trust_remote_code
+      # transformer = AutoModelForCausalLM.from_pretrained(model, trust_remote_code=True).to(dtype).to(device)
+
       # Tokenize the input text with the instruction
       messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
       ]
-      inputs = tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=True, return_tensors="pt", return_dict=True)
+      inputs = GLMPipeline.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=True, return_tensors="pt", return_dict=True)
 
     # Move inputs to the same device as the transformer
-    inputs = {key: value.to(transformer.device) for key, value in inputs.items()}
+    inputs = {key: value.to(GLMPipeline.transformer.device) for key, value in inputs.items()}
 
     # Generate enhanced text
-    outputs = transformer.generate(**inputs, max_new_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty)
-    output_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    outputs = GLMPipeline.transformer.generate(**inputs, max_new_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty)
+    output_text = GLMPipeline.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     # Remove the system prompt from the output text
     for message in messages:
       output_text = output_text.replace(message["content"], "").strip()
 
-    # Unload the model and tokenizer from memory
-    if unload_model:
-      transformer.cpu()
-      del transformer
-      del tokenizer
-      mm.soft_empty_cache()
+    # # Unload the model and tokenizer from memory
+    # if unload_model:
+    #   transformer.cpu()
+    #   del transformer
+    #   del tokenizer
+    #   mm.soft_empty_cache()
+
+    if unload_model == True:
+      GLMPipeline.parent.clearCache()
 
     return (output_text,)
 
 
 # Node class mappings and display names
 NODE_CLASS_MAPPINGS = {
+  "GLM-4 Model Loader": ModelLoader,
   "GLM-4 Prompt Enhancer": GLM4PromptEnhancer,
   "GLM-4 Inferencing": GLM4Inference,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+  "GLM-4ModelLoader": "GLM-4 Model Loader",
   "GLM-4PromptEnhancer": "GLM-4 Prompt Enhancer",
   "GLM-4Inference": "GLM-4 Inferencing",
 }
