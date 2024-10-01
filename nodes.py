@@ -72,7 +72,7 @@ class GLM4ModelLoader:
       
       # Clear cache
       if self.pipeline != None:
-        self.pipeline.clearCache() 
+        self.pipeline.clearCache()
 
       # Set precision type
       dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[self.precision]
@@ -138,7 +138,12 @@ class GLM4PromptEnhancer:
   CATEGORY = "GLM4Wrapper"
 
   def enhance_prompt(self, GLMPipeline, prompt, max_tokens=200, temperature=0.1, top_k=40, top_p=0.7, repetition_penalty=1.1, image=None, unload_model=True):
-    # Eempty cache
+
+    # Load the model if it is not loaded
+    if GLMPipeline.tokenizer == None :
+      GLMPipeline.parent.loadCheckPoint()
+
+    # Empty cache
     mm.soft_empty_cache()
 
     # Write the system prompt for enhancing the prompt
