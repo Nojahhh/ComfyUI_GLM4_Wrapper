@@ -15,6 +15,10 @@ import gc
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
 
+# BitsAndBytesConfig class for 4-bit and 8-bit quantization
+INT4_QUANTIZATION = BitsAndBytesConfig(load_in_4bit=True)
+INT8_QUANTIZATION = BitsAndBytesConfig(load_in_8bit=True)
+
 class GLMPipeline:
   def __init__(self):
     self.tokenizer = None
@@ -25,10 +29,16 @@ class GLMPipeline:
     self.parent = None
 
   def clearCache(self):
+    mm.soft_empty_cache()
     torch.cuda.synchronize()
     if self.transformer:
       self.transformer.cpu()
       del self.transformer
+    if self.tokenizer:
+      del self.tokenizer
+    torch.cuda.empty_cache()
+    torch._C._cuda_clearCublasWorkspaces()
+    gc.collect()
     self.tokenizer = None
     self.transformer = None
     self.model_name = None
@@ -71,6 +81,7 @@ class GLM4ModelLoader:
   FUNCTION = "gen"
 
   def loadCheckPoint(self):
+    # self.reinit_cuda()
     # Initialize the device and empty cache
     device = mm.get_torch_device()
     mm.soft_empty_cache()
@@ -89,15 +100,15 @@ class GLM4ModelLoader:
 
     if(self.model == "THUDM/glm-4v-9b"):
       # Load the model with low_cpu_mem_usage and trust_remote_code
-      if(self.quantization == "8"):
-        log.info(f"Loading GLM-4 model in 8-bit quantization mode")
-        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
-      elif(self.quantization == "4"):
+      if(self.quantization == "4"):
         log.info(f"Loading GLM-4 model in 4-bit quantization mode")
-        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_4bit=True))
+        transformer = AutoModelForCausalLM.from_pretrained(self.model, trust_remote_code=True, torch_dtype=dtype, quantization_config=INT4_QUANTIZATION)
+      elif(self.quantization == "8"):
+        log.info(f"Loading GLM-4 model in 8-bit quantization mode")
+        transformer = AutoModelForCausalLM.from_pretrained(self.model, trust_remote_code=True, torch_dtype=dtype, quantization_config=INT8_QUANTIZATION)
       else:
         log.info(f"Loading GLM-4 model in default mode")
-        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16).to(device)
+        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, trust_remote_code=True, torch_dtype=dtype).to(device)
     else:
       transformer = AutoModelForCausalLM.from_pretrained(self.model, device_map="auto", trust_remote_code=True).to(dtype).to(device)
     transformer.eval()
@@ -105,11 +116,21 @@ class GLM4ModelLoader:
     self.pipeline.tokenizer = tokenizer
     self.pipeline.transformer = transformer
     self.pipeline.model_name = self.model
-  
+
+  def reinit_cuda(self):
+    torch.cuda.empty_cache()
+    torch.cuda.ipc_collect()
+    torch.cuda.synchronize()
+    gc.collect()
+    torch._C._cuda_resetAccumulatedMemoryStats(torch.cuda.current_device())
+    if torch.cuda.is_available():
+      torch.cuda.set_device(torch.cuda.current_device())
+      torch.cuda.init()
+      torch.cuda.empty_cache()
+
   def clearCache(self):
-    # if self.pipeline != None:
-    self.pipeline.clearCache()
-    # mm.soft_empty_cache()
+    if self.pipeline != None:
+      self.pipeline.clearCache()
 
   def gen(self,model,precision,quantization):
     if self.model == None or self.model != model or self.pipeline == None:
@@ -278,9 +299,6 @@ class GLM4PromptEnhancer:
 
     if unload_model == True:
       GLMPipeline.parent.clearCache()
-      torch.cuda.empty_cache()
-      torch.cuda.ipc_collect()
-      gc.collect()
     
     return (enhanced_text,)
   
@@ -355,9 +373,6 @@ class GLM4Inference:
 
     if unload_model == True:
       GLMPipeline.parent.clearCache()
-      torch.cuda.empty_cache()
-      torch.cuda.ipc_collect()
-      gc.collect()
 
     return (output_text,)
 
