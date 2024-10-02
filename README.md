@@ -18,7 +18,7 @@ Hope you will enjoy your enhanced prompts and inference capabilities of these mo
 
 ## Features
 
-- **Model Loader**: Load various GLM-4 models with different precision and quantization settings.
+- **GLM-4 Model Loader**: Load various GLM-4 models with different precision and quantization settings.
 - **GLM-4 Prompt Enhancer**: Enhances base prompts using the GLM-4 model.
 - **GLM-4 Inferencing**: Performs inference using various GLM-4 models.
 
@@ -43,9 +43,9 @@ Hope you will enjoy your enhanced prompts and inference capabilities of these mo
 
 ## Usage
 
-### Model Loader
+### GLM-4 Model Loader
 
-The `ModelLoader` class is responsible for loading GLM-4 models. It supports various models and precision settings.
+The `GLM4ModelLoader` class is responsible for loading GLM-4 models. It supports various models and precision settings.
 
 #### Input Types
 
