@@ -60,8 +60,8 @@ The `GLM4ModelLoader` class is responsible for loading GLM-4 models. It supports
 #### Input Types
 
 - **model**: Choose the GLM-4 model to load. Model will download automatically from HuggingFace.co
-- **precision**: Precision type (`fp16`, `fp32`, `bf16`). `THUDM/glm-4v-9b` requires `bf16` and is set to run in 8-bit by default based on it's size. `alexwww94/glm-4v-9b-gptq-4bit` requires `bf16` and is set to run in 4-bit by default. `alexwww94/glm-4v-9b-gptq-3bit` requires `bf16` and is set to run in 3-bit by default.
-- **quantization**: Set the number of bits for quantization (`4`, `8`, `16`).
+- **precision**: Precision type (`fp16`, `fp32`, `bf16`). `THUDM/glm-4v-9b` requires `bf16` and is set to run in 4-bit by default based on it's size. `alexwww94/glm-4v-9b-gptq-4bit` requires `bf16` and is set to run in 4-bit by default. `alexwww94/glm-4v-9b-gptq-3bit` requires `bf16` and is set to run in 3-bit by default.
+- **quantization**: Set the number of bits for quantization (`4`, `8`, `16`). Default value of `8`.
 
 #### Output
 
@@ -136,7 +136,7 @@ The following GLM-4 models are supported by this wrapper:
 | `THUDM/LongWriter-glm4-9b`      | 9B    | `fp16`, `fp32`, `bf16` |
 
 ### Notes:
-- `THUDM/glm-4v-9b` requires `bf16` precision and is default 8-bit quantization due to its size and the typical VRAM limitations of consumer-grade GPUs (often 24GB or less).
+- `THUDM/glm-4v-9b` requires `bf16` precision and is default 4-bit quantization due to its size and the typical VRAM limitations of consumer-grade GPUs (often 24GB or less).
 - `alexwww94/glm-4v-9b-gptq-4bit` requires `bf16` and is default 4-bit.
 - `alexwww94/glm-4v-9b-gptq-3bit` requires `bf16` and is default 3-bit.
 - Only `THUDM/glm-4v-9b` and `alexwww94/glm-4v-9b-gptq-4bit` and `alexwww94/glm-4v-9b-gptq-3bit` models are able to handle image input.

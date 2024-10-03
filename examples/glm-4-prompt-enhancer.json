@@ -113,49 +113,16 @@
       ]
     },
     {
-      "id": 10,
-      "type": "GLM-4 Model Loader",
-      "pos": {
-        "0": 390,
-        "1": 130
-      },
-      "size": {
-        "0": 315,
-        "1": 106
-      },
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "GLMPipeline",
-          "type": "GLMPipeline",
-          "links": [
-            11
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "GLM-4 Model Loader"
-      },
-      "widgets_values": [
-        "THUDM/glm-4v-9b",
-        "bf16",
-        "8"
-      ]
-    },
-    {
       "id": 9,
       "type": "GLM-4 Prompt Enhancer",
       "pos": {
         "0": 760,
         "1": 130
       },
-      "size": [
-        342.5999755859375,
-        222
-      ],
+      "size": {
+        "0": 342.5999755859375,
+        "1": 222
+      },
       "flags": {},
       "order": 3,
       "mode": 0,
@@ -202,6 +169,39 @@
         1.1,
         true
       ]
+    },
+    {
+      "id": 10,
+      "type": "GLM-4 Model Loader",
+      "pos": {
+        "0": 390,
+        "1": 130
+      },
+      "size": {
+        "0": 315,
+        "1": 106
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "GLMPipeline",
+          "type": "GLMPipeline",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GLM-4 Model Loader"
+      },
+      "widgets_values": [
+        "alexwww94/glm-4v-9b-gptq-4bit",
+        "bf16",
+        "4"
+      ]
     }
   ],
   "links": [
@@ -242,10 +242,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.8264462809917361,
+      "scale": 1.3310000000000004,
       "offset": [
-        272.52704486550704,
-        56.38898669179459
+        -197.07572999605105,
+        -4.828693612460846
       ]
     }
   },

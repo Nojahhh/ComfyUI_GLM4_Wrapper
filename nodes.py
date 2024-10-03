@@ -70,7 +70,7 @@ class GLM4ModelLoader:
         ),
         "precision": (["fp16", "fp32", "bf16"],
           {"default": "bf16", "tooltip": "Recommended precision for GLM-4 model. bf16 required for glm-4v-9b (4-/8-bit quant), glm-4v-9b-gptq-4bit and glm-4v-9b-gptq-3bit."}),
-        "quantization": (["4", "8", "16"], {"default": "8", "tooltip": "Choose the number of bits for quantization. Only supported for glm-4v-9b model."}),
+        "quantization": (["4", "8", "16"], {"default": "4", "tooltip": "Choose the number of bits for quantization. Only supported for glm-4v-9b model."}),
       }
     }
 
