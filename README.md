@@ -18,8 +18,11 @@ Hope you will enjoy your enhanced prompts and inference capabilities of these mo
 ## Update 2024-10-03
 
 Added support for quantized models. They are performing exceptionally well. Check metrics below.
+
 Model `alexwww94/glm-4v-9b-gptq-4bit` is significatly more lightweight than the original and will hold ~8.5 GB of hdd space.
+
 Model `alexwww94/glm-4v-9b-gptq-3bit` is even more lightweight and will hold ~7.6 GB of hdd space.
+
 [Link to metrics](https://huggingface.co/alexwww94/glm-4v-9b-gptq-4bit#metrics)
 
 
