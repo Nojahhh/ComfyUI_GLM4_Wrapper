@@ -10,6 +10,6 @@ Repository = "https://github.com/Nojahhh/ComfyUI_GLM4_Wrapper"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "nojahhh"
 DisplayName = "ComfyUI_GLM4_Wrapper"
 Icon = ""
