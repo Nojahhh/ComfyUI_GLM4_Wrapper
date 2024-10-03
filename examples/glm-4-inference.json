@@ -153,7 +153,7 @@
         "Node name for S&R": "GLM-4 Inferencing"
       },
       "widgets_values": [
-        "What is the name of the celebrity playing this character? Explain who she is and where she was born and what her future might look like.",
+        "You are a very intelligent bot who can classify everything from humans to molecules.",
         "What is the name of the celebrity playing this character? Explain who she is and where she was born and what her future might look like.",
         250,
         0.7,
