@@ -25,10 +25,16 @@ class GLMPipeline:
     self.parent = None
 
   def clearCache(self):
-    torch.cuda.synchronize()
+    mm.soft_empty_cache()
     if self.transformer:
       self.transformer.cpu()
       del self.transformer
+    if self.tokenizer:
+      del self.tokenizer
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
+    torch._C._cuda_clearCublasWorkspaces()
+    gc.collect()
     self.tokenizer = None
     self.transformer = None
     self.model_name = None
@@ -51,6 +57,8 @@ class GLM4ModelLoader:
       "required": {
         "model": (
           [
+            "alexwww94/glm-4v-9b-gptq-4bit",
+            "alexwww94/glm-4v-9b-gptq-3bit",
             "THUDM/glm-4v-9b",
             "THUDM/glm-4-9b",
             "THUDM/glm-4-9b-chat",
@@ -58,10 +66,10 @@ class GLM4ModelLoader:
             "THUDM/LongCite-glm4-9b",
             "THUDM/LongWriter-glm4-9b"
           ],
-          {"tooltip": "Choose the GLM-4 model to load. Only glm-4v-9b model supports image input."}
+          {"tooltip": "Choose the GLM-4 model to load. Only glm-4v-9b, glm-4v-9b-gptq-4bit and glm-4v-9b-gptq-3bit models supports image input."}
         ),
         "precision": (["fp16", "fp32", "bf16"],
-          {"default": "bf16", "tooltip": "Recommended precision for GLM-4 model. bf16 required for glm-4v-9b (INT4/8 quant)."}),
+          {"default": "bf16", "tooltip": "Recommended precision for GLM-4 model. bf16 required for glm-4v-9b (4-/8-bit quant), glm-4v-9b-gptq-4bit and glm-4v-9b-gptq-3bit."}),
         "quantization": (["4", "8", "16"], {"default": "8", "tooltip": "Choose the number of bits for quantization. Only supported for glm-4v-9b model."}),
       }
     }
@@ -71,6 +79,7 @@ class GLM4ModelLoader:
   FUNCTION = "gen"
 
   def loadCheckPoint(self):
+    self.reinit_cuda()
     # Initialize the device and empty cache
     device = mm.get_torch_device()
     mm.soft_empty_cache()
@@ -82,22 +91,26 @@ class GLM4ModelLoader:
     # Set precision type
     dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[self.precision]
 
-    log.info(f"Loading GLM-4 model: {self.model}")
-
     # Load the tokenizer and model with specified precision, and trust remote code
     tokenizer = AutoTokenizer.from_pretrained(self.model, trust_remote_code=True)
 
-    if(self.model == "THUDM/glm-4v-9b"):
+    if self.model == "alexwww94/glm-4v-9b-gptq-4bit":
+      transformer = AutoModelForCausalLM.from_pretrained(
+          self.model,
+          torch_dtype=torch.float16,
+          device_map="auto",
+          low_cpu_mem_usage=True,
+          trust_remote_code=True,
+          use_cache=True
+      ).eval()
+    elif(self.model == "THUDM/glm-4v-9b"):
       # Load the model with low_cpu_mem_usage and trust_remote_code
-      if(self.quantization == "8"):
-        log.info(f"Loading GLM-4 model in 8-bit quantization mode")
-        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
-      elif(self.quantization == "4"):
-        log.info(f"Loading GLM-4 model in 4-bit quantization mode")
-        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16, quantization_config=BitsAndBytesConfig(load_in_4bit=True))
+      if(self.quantization == "4"):
+        transformer = AutoModelForCausalLM.from_pretrained(self.model, trust_remote_code=True, torch_dtype=dtype, quantization_config=BitsAndBytesConfig(load_in_4bit=True))
+      elif(self.quantization == "8"):
+        transformer = AutoModelForCausalLM.from_pretrained(self.model, trust_remote_code=True, torch_dtype=dtype, quantization_config=BitsAndBytesConfig(load_in_8bit=True))
       else:
-        log.info(f"Loading GLM-4 model in default mode")
-        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16).to(device)
+        transformer = AutoModelForCausalLM.from_pretrained(self.model, low_cpu_mem_usage=True, trust_remote_code=True, torch_dtype=dtype).to(device)
     else:
       transformer = AutoModelForCausalLM.from_pretrained(self.model, device_map="auto", trust_remote_code=True).to(dtype).to(device)
     transformer.eval()
@@ -105,11 +118,23 @@ class GLM4ModelLoader:
     self.pipeline.tokenizer = tokenizer
     self.pipeline.transformer = transformer
     self.pipeline.model_name = self.model
-  
+    self.pipeline.precision = self.precision
+    self.pipeline.quantization = self.quantization
+
+  def reinit_cuda(self):
+    torch.cuda.empty_cache()
+    torch.cuda.ipc_collect()
+    torch.cuda.synchronize()
+    gc.collect()
+    torch._C._cuda_resetAccumulatedMemoryStats(torch.cuda.current_device())
+    if torch.cuda.is_available():
+      torch.cuda.set_device(torch.cuda.current_device())
+      torch.cuda.init()
+      torch.cuda.empty_cache()
+
   def clearCache(self):
-    # if self.pipeline != None:
-    self.pipeline.clearCache()
-    # mm.soft_empty_cache()
+    if self.pipeline != None:
+      self.pipeline.clearCache()
 
   def gen(self,model,precision,quantization):
     if self.model == None or self.model != model or self.pipeline == None:
@@ -126,7 +151,7 @@ class GLM4PromptEnhancer:
     return {
       "required": {
         "GLMPipeline": ("GLMPipeline", {"tooltip": "Provide a GLM-4 pipeline."}),
-        "prompt": ("STRING", {"forceInput": True, "tooltip": "Provide a base prompt to enhance. Can be empty if image is provided and glm-4v-9b model is chosen."}),
+        "prompt": ("STRING", {"forceInput": True, "tooltip": "Provide a base prompt to enhance. Can be empty if image is provided and glm-4v-9b, glm-4v-9b-gptq-4bit or glm-4v-9b-gptq-3bit model is chosen."}),
         "max_tokens": ("INT", {"default": 200, "tooltip": "Limit the number of output tokens"}),
         "temperature": ("FLOAT", {"default": 0.1, "tooltip": "Temperature parameter for sampling"}),
         "top_k": ("INT", {"default": 40, "tooltip": "Top-k parameter for sampling"}),
@@ -135,7 +160,7 @@ class GLM4PromptEnhancer:
         "unload_model": ("BOOLEAN", {"default": True, "tooltip": "Unload the model after use to free up memory"}),
       },
       "optional": {
-        "image": ("IMAGE", {"tooltip": "Provide an image to enhance the prompt. Only supported for glm-4v-9b model."}),
+        "image": ("IMAGE", {"tooltip": "Provide an image to enhance the prompt. Only supported for glm-4v-9b, glm-4v-9b-gptq-4bit and glm-4v-9b-gptq-3bit models."}),
       }
     }
 
@@ -187,7 +212,7 @@ class GLM4PromptEnhancer:
     """
 
     # Check if the model is GLM-4v-9b for image to video captioning
-    if(GLMPipeline.model_name == "THUDM/glm-4v-9b"):
+    if GLMPipeline.model_name == "THUDM/glm-4v-9b" or GLMPipeline.model_name == "alexwww94/glm-4v-9b-gptq-4bit":
 
       # Add an explicit instruction to enhance the prompt
       if image is not None:
@@ -278,9 +303,6 @@ class GLM4PromptEnhancer:
 
     if unload_model == True:
       GLMPipeline.parent.clearCache()
-      torch.cuda.empty_cache()
-      torch.cuda.ipc_collect()
-      gc.collect()
     
     return (enhanced_text,)
   
@@ -300,7 +322,7 @@ class GLM4Inference:
         "repetition_penalty": ("FLOAT", {"default": 1.0, "tooltip": "Repetition penalty for sampling"}),
       },
       "optional": {
-        "image": ("IMAGE", {"tooltip": "Provide an image to use as input for inferencing. Only supported for glm-4v-9b model."}),
+        "image": ("IMAGE", {"tooltip": "Provide an image to use as input for inferencing. Only supported for glm-4v-9b, glm-4v-9b-gptq-4bit and glm-4v-9b-gptq-3bit models."}),
         "unload_model": ("BOOLEAN", {"default": True, "tooltip": "Unload the model after use to free up memory"}),
       }
     }
@@ -319,7 +341,7 @@ class GLM4Inference:
       GLMPipeline.parent.loadCheckPoint()
 
     # # Check if the model is GLM-4v-9b for image to video captioning
-    if GLMPipeline.model_name == "THUDM/glm-4v-9b":
+    if GLMPipeline.model_name == "THUDM/glm-4v-9b" or GLMPipeline.model_name == "alexwww94/glm-4v-9b-gptq-4bit":
 
       # Add an explicit instruction to enhance the prompt
       if image is not None:
@@ -355,9 +377,6 @@ class GLM4Inference:
 
     if unload_model == True:
       GLMPipeline.parent.clearCache()
-      torch.cuda.empty_cache()
-      torch.cuda.ipc_collect()
-      gc.collect()
 
     return (output_text,)
 
