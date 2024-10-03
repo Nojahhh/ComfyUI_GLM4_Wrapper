@@ -61,7 +61,7 @@ The `GLM4ModelLoader` class is responsible for loading GLM-4 models. It supports
 
 - **model**: Choose the GLM-4 model to load. Model will download automatically from HuggingFace.co
 - **precision**: Precision type (`fp16`, `fp32`, `bf16`). `THUDM/glm-4v-9b` requires `bf16` and is set to run in 4-bit by default based on it's size. `alexwww94/glm-4v-9b-gptq-4bit` requires `bf16` and is set to run in 4-bit by default. `alexwww94/glm-4v-9b-gptq-3bit` requires `bf16` and is set to run in 3-bit by default.
-- **quantization**: Set the number of bits for quantization (`4`, `8`, `16`). Default value of `8`.
+- **quantization**: Set the number of bits for quantization (`4`, `8`, `16`). Default value of `4`.
 
 #### Output
 
