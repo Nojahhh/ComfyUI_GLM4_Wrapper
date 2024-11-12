@@ -48,7 +48,7 @@ Model `alexwww94/glm-4v-9b-gptq-3bit` is even more lightweight and will hold ~7.
   ```
 4. Install the required dependencies:
   ```bash
-  ../../python_embeded python.exe -m pip install -r requirements.txt
+  ../../python_embeded python -m pip install -r requirements.txt
   ```
 
 ## Usage
