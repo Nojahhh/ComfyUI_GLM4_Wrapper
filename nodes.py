@@ -309,7 +309,7 @@ class GLM4Inference:
         "GLMPipeline": ("GLMPipeline", {"tooltip": "Provide a GLM-4 pipeline."}),
         "system_prompt": ("STRING", {"default":"", "multiline": True, "tooltip": "Provide a system prompt for inferencing. (Instructions for the model)"}),
         "user_prompt": ("STRING", {"default":"", "multiline": True, "tooltip": "Provide a user prompt for inferencing"}),
-        "max__new_tokens": ("INT", {"default": 250, "tooltip": "Limit the number of output tokens"}),
+        "max_new_tokens": ("INT", {"default": 250, "tooltip": "Limit the number of output tokens"}),
         "temperature": ("FLOAT", {"default": 0.7, "tooltip": "Temperature parameter for sampling"}),
         "top_k": ("INT", {"default": 50, "tooltip": "Top-k parameter for sampling"}),
         "top_p": ("FLOAT", {"default": 1, "tooltip": "Top-p parameter for sampling"}),
