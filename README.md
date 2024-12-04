@@ -93,6 +93,7 @@ Enhances a given prompt using the GLM-4 model.
 - **repetition_penalty**: Repetition penalty for sampling.
 - **image** (optional): Image to enhance the prompt. Only works with `THUDM/glm-4v-9b`, `alexwww94/glm-4v-9b-gptq-4bit` and `alexwww94/glm-4v-9b-gptq-3bit`.
 - **unload_model**: Unload the model after use.
+- **seed** (optional): Seed for reproducability.
 
 #### Output
 
@@ -114,6 +115,7 @@ Performs inference using the GLM-4 model.
 - **repetition_penalty**: Repetition penalty for sampling.
 - **image** (optional): Image to use as input for inferencing. Only works with `THUDM/glm-4v-9b`, `alexwww94/glm-4v-9b-gptq-4bit` and `alexwww94/glm-4v-9b-gptq-3bit`.
 - **unload_model**: Unload the model after use.
+- **seed** (optional): Seed for reproducability.
 
 #### Output
 
@@ -176,7 +178,8 @@ enhanced_prompt = enhancer.enhance_prompt(
   top_p=0.7,
   repetition_penalty=1.1,
   image=None,  # PIL Image
-  unload_model=True
+  unload_model=True,
+  seed=42
 )
 print(enhanced_prompt)
 ```
@@ -202,7 +205,8 @@ output_text = inference.infer(
   top_p=1,
   repetition_penalty=1.0,
   image=None,
-  unload_model=True
+  unload_model=True,
+  seed=42
 )
 print(output_text)
 ```
