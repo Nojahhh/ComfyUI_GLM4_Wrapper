@@ -21,8 +21,11 @@ Added support for quantized models. They are performing exceptionally well. Chec
 
 **Important**
 To be able to use these models you will need to install AutoGPTQ library.
+
 `pip install auto-gptq`
+
 If you are on Windows you will need to install this from source to enable CUDA extensions.
+
 [AutoGPTQ](https://github.com/AutoGPTQ/AutoGPTQ/)
 
 Model `alexwww94/glm-4v-9b-gptq-4bit` is significatly more lightweight than the original and will hold ~8.5 GB of hdd space.
