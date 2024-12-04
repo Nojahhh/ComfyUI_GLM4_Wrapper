@@ -5,7 +5,7 @@
 
 import torch
 import comfy.model_management as mm
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, set_seed
 from PIL import Image
 import logging
 import numpy as np
@@ -79,7 +79,7 @@ class GLM4ModelLoader:
   FUNCTION = "gen"
 
   def loadCheckPoint(self):
-    self.reinit_cuda()
+    # self.reinit_cuda()
     # Initialize the device and empty cache
     device = mm.get_torch_device()
     mm.soft_empty_cache()
@@ -95,6 +95,9 @@ class GLM4ModelLoader:
     tokenizer = AutoTokenizer.from_pretrained(self.model, trust_remote_code=True)
 
     if self.model == "alexwww94/glm-4v-9b-gptq-4bit" or self.model == "alexwww94/glm-4v-9b-gptq-3bit":
+      # from gptqmodel import GPTQModel, BACKEND, get_best_device
+
+      # transformer = GPTQModel.load(self.model, device=get_best_device(), backend=BACKEND.MARLIN, trust_remote_code=True)
       transformer = AutoModelForCausalLM.from_pretrained(self.model, torch_dtype=torch.float16, device_map="auto", low_cpu_mem_usage=True, trust_remote_code=True, use_cache=True)
     elif(self.model == "THUDM/glm-4v-9b"):
       # Load the model with low_cpu_mem_usage and trust_remote_code
@@ -114,15 +117,15 @@ class GLM4ModelLoader:
     self.pipeline.precision = self.precision
     self.pipeline.quantization = self.quantization
 
-  def reinit_cuda(self):
-    torch.cuda.empty_cache()
-    torch.cuda.ipc_collect()
-    torch.cuda.synchronize()
-    gc.collect()
-    torch._C._cuda_resetAccumulatedMemoryStats(torch.cuda.current_device())
-    if torch.cuda.is_available():
-      torch.cuda.set_device(torch.cuda.current_device())
-      torch.cuda.init()
+  # def reinit_cuda(self):
+  #   torch.cuda.empty_cache()
+  #   torch.cuda.ipc_collect()
+  #   torch.cuda.synchronize()
+  #   gc.collect()
+  #   torch._C._cuda_resetAccumulatedMemoryStats(torch.cuda.current_device())
+  #   if torch.cuda.is_available():
+  #     torch.cuda.set_device(torch.cuda.current_device())
+  #     torch.cuda.init()
 
   def clearCache(self):
     if self.pipeline != None:
@@ -150,6 +153,7 @@ class GLM4PromptEnhancer:
         "top_p": ("FLOAT", {"default": 0.7, "tooltip": "Top-p parameter for sampling"}),
         "repetition_penalty": ("FLOAT", {"default": 1.1, "tooltip": "Repetition penalty for sampling"}),
         "unload_model": ("BOOLEAN", {"default": True, "tooltip": "Unload the model after use to free up memory"}),
+        "seed": ("INT", {"default": 42, "min": 0, "max": 2**32 - 1}),
       },
       "optional": {
         "image": ("IMAGE", {"tooltip": "Provide an image to enhance the prompt. Only supported for glm-4v-9b, glm-4v-9b-gptq-4bit and glm-4v-9b-gptq-3bit models."}),
@@ -161,13 +165,16 @@ class GLM4PromptEnhancer:
   FUNCTION = "enhance_prompt"
   CATEGORY = "GLM4Wrapper"
 
-  def enhance_prompt(self, GLMPipeline, prompt, max_new_tokens=200, temperature=0.1, top_k=40, top_p=0.7, repetition_penalty=1.1, image=None, unload_model=True):
+  def enhance_prompt(self, GLMPipeline, prompt, max_new_tokens=200, temperature=0.1, top_k=40, top_p=0.7, repetition_penalty=1.1, image=None, seed=42, unload_model=True):
     # Empty cache
     mm.soft_empty_cache()
 
     # Load the model if it is not loaded
     if GLMPipeline.tokenizer == None :
       GLMPipeline.parent.loadCheckPoint()
+
+    # Set seed for random number generation
+    set_seed(seed)
 
     # Write the system prompt for enhancing the prompt
     sys_prompt_t2v = """You are part of a team of bots that creates videos. You work with an assistant bot that will draw anything you say in square brackets.
@@ -185,7 +192,9 @@ class GLM4PromptEnhancer:
 
     # Write the system prompt for image to video captioning
     sys_prompt_i2v = """
-    **Objective**: **Give a highly descriptive video caption based on input image and user input. **. As an expert, delve deep into the image with a discerning eye, leveraging rich creativity, meticulous thought. When describing the details of an image, include appropriate dynamic information to ensure that the video caption contains reasonable actions and plots. If user input is not empty, then the caption should be expanded according to the user's input. 
+    **Objective**: **Give a highly descriptive video story based on input image and user input. **. As an expert, delve deep into the image with a discerning eye, leveraging rich creativity, meticulous thought. When describing the details of an image, include appropriate dynamic information to ensure that the video caption contains reasonable actions and plots. If user input is not empty, then the caption should be expanded according to the user's input. 
+
+    **Note**: Keep the story coherent and engaging, ensuring that the video caption is vivid and imaginative. The video caption should be detailed and descriptive, capturing the essence of the image and user input.
 
     **Note**: The input image is the first frame of the video, and the output video caption should describe the motion starting from the current image. User input is optional and can be empty.
 
@@ -314,6 +323,7 @@ class GLM4Inference:
         "top_k": ("INT", {"default": 50, "tooltip": "Top-k parameter for sampling"}),
         "top_p": ("FLOAT", {"default": 1, "tooltip": "Top-p parameter for sampling"}),
         "repetition_penalty": ("FLOAT", {"default": 1.0, "tooltip": "Repetition penalty for sampling"}),
+        "seed": ("INT", {"default": 42, "min": 0, "max": 2**32 - 1}),
       },
       "optional": {
         "image": ("IMAGE", {"tooltip": "Provide an image to use as input for inferencing. Only supported for glm-4v-9b, glm-4v-9b-gptq-4bit and glm-4v-9b-gptq-3bit models."}),
@@ -326,13 +336,16 @@ class GLM4Inference:
   FUNCTION = "infer"
   CATEGORY = "GLM4Wrapper"
 
-  def infer(self, GLMPipeline, system_prompt, user_prompt, max_new_tokens=250, temperature=0.7, top_k=50, top_p=1, repetition_penalty=1.0, image=None, unload_model=True):
+  def infer(self, GLMPipeline, system_prompt, user_prompt, max_new_tokens=250, temperature=0.7, top_k=50, top_p=1, repetition_penalty=1.0, image=None, seed=42, unload_model=True):
     # Empty cache
     mm.soft_empty_cache()
 
     # Load the model if it is not loaded
     if GLMPipeline.tokenizer == None :
       GLMPipeline.parent.loadCheckPoint()
+
+    # Set seed for random number generation
+    set_seed(seed)
 
     # # Check if the model is GLM-4v-9b for image to video captioning
     if GLMPipeline.model_name == "THUDM/glm-4v-9b" or GLMPipeline.model_name == "alexwww94/glm-4v-9b-gptq-4bit" or GLMPipeline.model_name == "alexwww94/glm-4v-9b-gptq-3bit":
