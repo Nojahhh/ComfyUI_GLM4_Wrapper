@@ -17,7 +17,7 @@ Hope you will enjoy your enhanced prompts and inference capabilities of these mo
 
 ## Update 2024-10-03
 
-Added support for quantized models. They are performing exceptionally well. Check metrics below.
+Added support for quantized models. They perform exceptionally well. Check metrics below.
 
 **Important**:
 To be able to use these models you will need to install AutoGPTQ library.
