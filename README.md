@@ -1,5 +1,7 @@
 # ComfyUI GLM-4 Wrapper
 
+**NOTE:** You can find this wrappen in ComfyUI-Manager. Search for GLM-4 and install it through there.
+
 This repository contains custom nodes for ComfyUI, specifically designed to enhance and infer prompts using the GLM-4 model on local hardware.
 
 The nodes leverage the GLM-4 model to generate detailed and descriptive image/video captions or enhance user-provided prompts, among regular inference.
@@ -41,6 +43,10 @@ Model `alexwww94/glm-4v-9b-gptq-3bit` is even more lightweight and will hold ~7.
 - **GLM-4 Inferencing**: Performs inference using various GLM-4 models.
 
 ## Installation
+
+Easiest way to install this is through [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager)
+
+You can also install this manually:
 
 1. Navigate to ComfyUI custom nodes:
   ```bash
