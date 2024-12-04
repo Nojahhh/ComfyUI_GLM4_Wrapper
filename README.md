@@ -19,7 +19,7 @@ Hope you will enjoy your enhanced prompts and inference capabilities of these mo
 
 Added support for quantized models. They are performing exceptionally well. Check metrics below.
 
-**Important**
+**Important**:
 To be able to use these models you will need to install AutoGPTQ library.
 
 `pip install auto-gptq`
