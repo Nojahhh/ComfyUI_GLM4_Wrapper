@@ -1,6 +1,6 @@
 # ComfyUI GLM-4 Wrapper
 
-**NOTE:** You can find this wrappen in ComfyUI-Manager. Search for GLM-4 and install it through there.
+**NOTE:** You can find this wrapper in [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager). Search for GLM-4 and install it through there.
 
 This repository contains custom nodes for ComfyUI, specifically designed to enhance and infer prompts using the GLM-4 model on local hardware.
 
