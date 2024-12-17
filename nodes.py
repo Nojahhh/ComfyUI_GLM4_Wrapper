@@ -152,7 +152,7 @@ class GLM4PromptEnhancer:
         "top_k": ("INT", {"default": 40, "tooltip": "Top-k parameter for sampling"}),
         "top_p": ("FLOAT", {"default": 0.7, "tooltip": "Top-p parameter for sampling"}),
         "repetition_penalty": ("FLOAT", {"default": 1.1, "tooltip": "Repetition penalty for sampling"}),
-        "unload_model": ("BOOLEAN", {"default": True, "tooltip": "Unload the model after use to free up memory"}),
+        "unload_model": ("BOOLEAN", {"default": False, "tooltip": "Unload the model after use to free up memory"}),
         "seed": ("INT", {"default": 42, "min": 0, "max": 2**32 - 1}),
       },
       "optional": {
@@ -327,7 +327,7 @@ class GLM4Inference:
       },
       "optional": {
         "image": ("IMAGE", {"tooltip": "Provide an image to use as input for inferencing. Only supported for glm-4v-9b, glm-4v-9b-gptq-4bit and glm-4v-9b-gptq-3bit models."}),
-        "unload_model": ("BOOLEAN", {"default": True, "tooltip": "Unload the model after use to free up memory"}),
+        "unload_model": ("BOOLEAN", {"default": False, "tooltip": "Unload the model after use to free up memory"}),
       }
     }
 
