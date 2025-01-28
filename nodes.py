@@ -26,15 +26,17 @@ class GLMPipeline:
 
   def clearCache(self):
     mm.soft_empty_cache()
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
+    torch._C._cuda_clearCublasWorkspaces()
+    gc.collect()
+
+  def unloadModel(self):
     if self.transformer:
       self.transformer.cpu()
       del self.transformer
     if self.tokenizer:
       del self.tokenizer
-    torch.cuda.empty_cache()
-    torch.cuda.synchronize()
-    torch._C._cuda_clearCublasWorkspaces()
-    gc.collect()
     self.tokenizer = None
     self.transformer = None
     self.model_name = None
@@ -130,6 +132,10 @@ class GLM4ModelLoader:
   def clearCache(self):
     if self.pipeline != None:
       self.pipeline.clearCache()
+
+  def unloadModel(self):
+    if self.pipeline != None:
+      self.pipeline.unloadModel()
 
   def gen(self,model,precision,quantization):
     if self.model == None or self.model != model or self.pipeline == None:
@@ -305,7 +311,8 @@ class GLM4PromptEnhancer:
       enhanced_text = enhanced_text.split("\n")[0]
 
     if unload_model == True:
-      GLMPipeline.parent.clearCache()
+      GLMPipeline.parent.unloadModel()
+    GLMPipeline.parent.clearCache()
     
     return (enhanced_text,)
   
@@ -387,7 +394,8 @@ class GLM4Inference:
       output_text = output_text.rsplit(".", 1)[0] + "."
 
     if unload_model == True:
-      GLMPipeline.parent.clearCache()
+      GLMPipeline.parent.unloadModel()
+    GLMPipeline.parent.clearCache()
 
     return (output_text,)
 
