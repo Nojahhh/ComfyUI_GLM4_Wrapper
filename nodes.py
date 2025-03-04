@@ -5,7 +5,7 @@
 
 import torch
 import comfy.model_management as mm
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, set_seed
+from transformers import Qwen2_5_VLForConditionalGeneration, AutoModelForCausalLM, AutoTokenizer, AutoProcessor, BitsAndBytesConfig, set_seed
 from PIL import Image
 import logging
 import numpy as np
@@ -15,6 +15,13 @@ import gc
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
 
+def tensor_to_pil(image_tensor, batch_index=0) -> Image:
+    # Convert tensor of shape [batch, height, width, channels] at the batch_index to PIL Image
+    image_tensor = image_tensor[batch_index].unsqueeze(0)
+    i = 255.0 * image_tensor.cpu().numpy()
+    img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8).squeeze())
+    return img
+
 class GLMPipeline:
   def __init__(self):
     self.tokenizer = None
@@ -22,6 +29,7 @@ class GLMPipeline:
     self.model_name = None
     self.precision = None
     self.quantization = None
+    self.processor = None
     self.parent = None
 
   def clearCache(self):
@@ -42,6 +50,9 @@ class GLMPipeline:
     self.model_name = None
     self.precision = None
     self.quantization = None
+    self.processor = None
+    torch.cuda.empty_cache()
+    torch.cuda.ipc_collect()
 
 class GLM4ModelLoader:
 
@@ -49,6 +60,7 @@ class GLM4ModelLoader:
     self.model = None
     self.precision = None
     self.quantization = None
+    self.processor = None
     self.pipeline = GLMPipeline()
     self.pipeline.parent = self
     pass
@@ -59,6 +71,8 @@ class GLM4ModelLoader:
       "required": {
         "model": (
           [
+            "Qwen/Qwen2.5-VL-3B-Instruct",
+            "Qwen/Qwen2.5-VL-7B-Instruct",
             "alexwww94/glm-4v-9b-gptq-4bit",
             "alexwww94/glm-4v-9b-gptq-3bit",
             "THUDM/glm-4v-9b",
@@ -96,7 +110,24 @@ class GLM4ModelLoader:
     # Load the tokenizer and model with specified precision, and trust remote code
     tokenizer = AutoTokenizer.from_pretrained(self.model, trust_remote_code=True)
 
-    if self.model == "alexwww94/glm-4v-9b-gptq-4bit" or self.model == "alexwww94/glm-4v-9b-gptq-3bit":
+    if self.model == "Qwen/Qwen2.5-VL-3B-Instruct" or self.model == "Qwen/Qwen2.5-VL-7B-Instruct":
+      if self.processor is None:
+        # Define min_pixels and max_pixels:
+        # Images will be resized to maintain their aspect ratio
+        # within the range of min_pixels and max_pixels.
+        min_pixels = 256*28*28
+        max_pixels = 1024*28*28
+
+        self.processor = AutoProcessor.from_pretrained(self.model, min_pixels=min_pixels, max_pixels=max_pixels)
+      if self.quantization == "4":
+        quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+      elif self.quantization == "8":
+        quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+      else:
+        quantization_config = None
+      transformer = Qwen2_5_VLForConditionalGeneration.from_pretrained(self.model, torch_dtype=dtype, device_map="auto", quantization_config=quantization_config)
+
+    elif self.model == "alexwww94/glm-4v-9b-gptq-4bit" or self.model == "alexwww94/glm-4v-9b-gptq-3bit":
       # from gptqmodel import GPTQModel, BACKEND, get_best_device
 
       # transformer = GPTQModel.load(self.model, device=get_best_device(), backend=BACKEND.MARLIN, trust_remote_code=True)
@@ -118,6 +149,7 @@ class GLM4ModelLoader:
     self.pipeline.model_name = self.model
     self.pipeline.precision = self.precision
     self.pipeline.quantization = self.quantization
+    self.pipeline.processor = self.processor
 
   # def reinit_cuda(self):
   #   torch.cuda.empty_cache()
@@ -235,6 +267,36 @@ class GLM4PromptEnhancer:
         add_generation_prompt=True, tokenize=True, return_tensors="pt",
         return_dict=True)
 
+    elif GLMPipeline.model_name == "Qwen/Qwen2.5-VL-3B-Instruct" or GLMPipeline.model_name == "Qwen/Qwen2.5-VL-7B-Instruct":
+      from qwen_vl_utils import process_vision_info
+      messages = [
+        {
+          "role": "user",
+          "content": [
+            {"type": "text", "text": f"{sys_prompt_i2v} {prompt}"},
+          ],
+        }
+      ]
+      pil_image = tensor_to_pil(image)
+      messages[0]["content"].insert(0, {
+        "type": "image",
+        "image": pil_image,
+      })
+
+      # Tokenize the input text with the instruction
+      text = GLMPipeline.processor.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True
+      )
+
+      image_inputs, video_inputs = process_vision_info(messages)
+
+      inputs = GLMPipeline.processor(
+        text=[text],
+        images=image_inputs,
+        videos=video_inputs,
+        padding=True,
+        return_tensors="pt"
+      ).to("cuda")
     else:
 
       # Add an explicit instruction to enhance the prompt
@@ -278,37 +340,56 @@ class GLM4PromptEnhancer:
         return_dict=True,
         truncation=True)
 
-    # Move inputs to the same device as the transformer
-    inputs = {key: value.to(GLMPipeline.transformer.device) for key, value in inputs.items()}
+    if GLMPipeline.model_name == "Qwen/Qwen2.5-VL-3B-Instruct" or GLMPipeline.model_name == "Qwen/Qwen2.5-VL-7B-Instruct":
+      try:
+        generated_ids = GLMPipeline.transformer.generate(**inputs, max_new_tokens=max_new_tokens)
+        generated_ids_trimmed = [
+          out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+        ]
+        enhanced_text = GLMPipeline.processor.batch_decode(
+          generated_ids_trimmed,
+          skip_special_tokens=True,
+          clean_up_tokenization_spaces=False,
+          temperature=temperature,
+        )
+        if enhanced_text[0].startswith('['):
+          enhanced_text = enhanced_text[0][1:]
+          enhanced_text = enhanced_text.split("]")[0]
+        enhanced_text = enhanced_text.strip()
+      except Exception as e:
+        return (f"Error during model inference: {str(e)}",)
+    else:
+      # Move inputs to the same device as the transformer
+      inputs = {key: value.to(GLMPipeline.transformer.device) for key, value in inputs.items()}
 
-    # Generate enhanced text
-    with torch.no_grad():
-      GLMPipeline.transformer.eval()
-      outputs = GLMPipeline.transformer.generate(**inputs, max_new_tokens=max_new_tokens, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty)
-      enhanced_text = GLMPipeline.tokenizer.decode(outputs[0], skip_special_tokens=True)
+      # Generate enhanced text
+      with torch.no_grad():
+        GLMPipeline.transformer.eval()
+        outputs = GLMPipeline.transformer.generate(**inputs, max_new_tokens=max_new_tokens, temperature=temperature, top_k=top_k, top_p=top_p, repetition_penalty=repetition_penalty)
+        enhanced_text = GLMPipeline.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-    # Remove the system prompt from the output text
-    for message in messages:
-      enhanced_text = enhanced_text.replace(message["content"], "").strip()
+      # Remove the system prompt from the output text
+      for message in messages:
+        enhanced_text = enhanced_text.replace(message["content"], "").strip()
 
-    # Clean up the enhanced text
-    if enhanced_text.startswith('"'):
-      enhanced_text = enhanced_text[1:]
-    if enhanced_text.endswith('"'):
-      enhanced_text = enhanced_text[:-1]
-    if enhanced_text.startswith('[') and "]" in enhanced_text:
-      enhanced_text = enhanced_text.split("]")[0]
-    if enhanced_text.startswith('['):
-      enhanced_text = enhanced_text[1:]
-    if enhanced_text.endswith(']'):
-      enhanced_text = enhanced_text[:-1]
-    enhanced_text = enhanced_text.replace('Captivating scene:', '').strip()
+      # Clean up the enhanced text
+      if enhanced_text.startswith('"'):
+        enhanced_text = enhanced_text[1:]
+      if enhanced_text.endswith('"'):
+        enhanced_text = enhanced_text[:-1]
+      if enhanced_text.startswith('[') and "]" in enhanced_text:
+        enhanced_text = enhanced_text.split("]")[0]
+      if enhanced_text.startswith('['):
+        enhanced_text = enhanced_text[1:]
+      if enhanced_text.endswith(']'):
+        enhanced_text = enhanced_text[:-1]
+      enhanced_text = enhanced_text.replace('Captivating scene:', '').strip()
 
-    # Remove any extra newlines or carriage returns
-    if "\r" in enhanced_text:
-      enhanced_text = enhanced_text.split("\r")[0]
-    if "\n" in enhanced_text:
-      enhanced_text = enhanced_text.split("\n")[0]
+      # Remove any extra newlines or carriage returns
+      if "\r" in enhanced_text:
+        enhanced_text = enhanced_text.split("\r")[0]
+      if "\n" in enhanced_text:
+        enhanced_text = enhanced_text.split("\n")[0]
 
     if unload_model == True:
       GLMPipeline.parent.unloadModel()
