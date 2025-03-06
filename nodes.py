@@ -73,6 +73,7 @@ class GLM4ModelLoader:
           [
             "Qwen/Qwen2.5-VL-3B-Instruct",
             "Qwen/Qwen2.5-VL-7B-Instruct",
+            "Qwen/Qwen2.5-3B-Instruct",
             "alexwww94/glm-4v-9b-gptq-4bit",
             "alexwww94/glm-4v-9b-gptq-3bit",
             "THUDM/glm-4v-9b",
@@ -82,7 +83,7 @@ class GLM4ModelLoader:
             "THUDM/LongCite-glm4-9b",
             "THUDM/LongWriter-glm4-9b"
           ],
-          {"tooltip": "Choose the GLM-4 model to load. Only glm-4v-9b, glm-4v-9b-gptq-4bit and glm-4v-9b-gptq-3bit models supports image input."}
+          {"tooltip": "Choose the GLM-4 model to load. Only glm-4v-9b, glm-4v-9b-gptq-4bit, glm-4v-9b-gptq-3bit, Qwen2.5-VL-3B-Instruct and Qwen2.5-VL-7B-Instruct models supports image input."}
         ),
         "precision": (["fp16", "fp32", "bf16"],
           {"default": "bf16", "tooltip": "Recommended precision for GLM-4 model. bf16 required for glm-4v-9b (4-/8-bit quant), glm-4v-9b-gptq-4bit and glm-4v-9b-gptq-3bit."}),
@@ -214,7 +215,20 @@ class GLM4PromptEnhancer:
     # Set seed for random number generation
     set_seed(seed)
 
-    # Write the system prompt for enhancing the prompt
+    # Write the system prompt for enhancing the prompt (text)
+    sys_prompt_t2t = """You are part of a team of bots that creates images. You work with an assistant bot that will draw anything you say in square brackets.
+
+    For example , outputting " a beautiful morning in the woods with the sun peaking through the trees " will trigger your partner bot to output an image of a forest morning , as described. You will be prompted by people looking to create detailed , amazing images. The way to accomplish this is to take their short prompts and make them extremely detailed and descriptive.
+    There are a few rules to follow:
+
+    You will only ever output a single image description per user request.
+
+    When modifications are requested , you should not simply make the description longer . You should refactor the entire description to integrate the suggestions.
+    Other times the user will not want modifications , but instead want a new image . In this case , you should ignore your previous conversation with the user.
+
+    Image descriptions must have the same num of words as examples below. Extra words will be ignored."""
+
+    # Write the system prompt for enhancing the prompt (video)
     sys_prompt_t2v = """You are part of a team of bots that creates videos. You work with an assistant bot that will draw anything you say in square brackets.
 
     For example , outputting " a beautiful morning in the woods with the sun peaking through the trees " will trigger your partner bot to output an video of a forest morning , as described. You will be prompted by people looking to create detailed , amazing videos. The way to accomplish this is to take their short prompts and make them extremely detailed and descriptive.
@@ -267,36 +281,76 @@ class GLM4PromptEnhancer:
         add_generation_prompt=True, tokenize=True, return_tensors="pt",
         return_dict=True)
 
-    elif GLMPipeline.model_name == "Qwen/Qwen2.5-VL-3B-Instruct" or GLMPipeline.model_name == "Qwen/Qwen2.5-VL-7B-Instruct":
-      from qwen_vl_utils import process_vision_info
-      messages = [
-        {
-          "role": "user",
-          "content": [
-            {"type": "text", "text": f"{sys_prompt_i2v} {prompt}"},
-          ],
-        }
-      ]
-      pil_image = tensor_to_pil(image)
-      messages[0]["content"].insert(0, {
-        "type": "image",
-        "image": pil_image,
-      })
+    elif GLMPipeline.model_name == "Qwen/Qwen2.5-VL-3B-Instruct" or GLMPipeline.model_name == "Qwen/Qwen2.5-VL-7B-Instruct" or GLMPipeline.model_name == "Qwen/Qwen2.5-3B-Instruct":
 
-      # Tokenize the input text with the instruction
-      text = GLMPipeline.processor.apply_chat_template(
-        messages, tokenize=False, add_generation_prompt=True
-      )
+      if image is not None:
+        from qwen_vl_utils import process_vision_info
+        messages = [
+          {
+            "role": "user",
+            "content": [
+              {"type": "text", "text": f"{sys_prompt_i2v} {prompt}"},
+            ],
+          }
+        ]
+        pil_image = tensor_to_pil(image)
+        messages[0]["content"].insert(0, {
+          "type": "image",
+          "image": pil_image,
+        })
 
-      image_inputs, video_inputs = process_vision_info(messages)
+        # Tokenize the input text with the instruction
+        text = GLMPipeline.processor.apply_chat_template(
+          messages, tokenize=False, add_generation_prompt=True
+        )
 
-      inputs = GLMPipeline.processor(
-        text=[text],
-        images=image_inputs,
-        videos=video_inputs,
-        padding=True,
-        return_tensors="pt"
-      ).to("cuda")
+        image_inputs, video_inputs = process_vision_info(messages)
+
+        inputs = GLMPipeline.processor(
+          text=[text],
+          images=image_inputs,
+          videos=video_inputs,
+          padding=True,
+          return_tensors="pt"
+        ).to("cuda")
+      else:
+        messages=[
+          {"role": "system", "content": f"{sys_prompt_t2t}"},
+          {
+              "role": "user",
+              "content": 'Create an imaginative image descriptive caption or modify an earlier caption for the user input : " a girl is on the beach"',
+          },
+          {
+              "role": "assistant",
+              "content": "A radiant woman stands on a deserted beach, arms outstretched, wearing a beige trench coat, white blouse, light blue jeans, and chic boots, against a backdrop of soft sky and sea. Moments later, she is seen mid-twirl, arms exuberant, with the lighting suggesting dawn or dusk. Then, she runs along the beach, her attire complemented by an off-white scarf and black ankle boots, the tranquil sea behind her. Finally, she holds a paper airplane, her pose reflecting joy and freedom, with the ocean's gentle waves and the sky's soft pastel hues enhancing the serene ambiance.",
+          },
+          {
+              "role": "user",
+              "content": 'Create an imaginative image descriptive caption or modify an earlier caption for the user input : " A man jogging on a football field"',
+          },
+          {
+              "role": "assistant",
+              "content": "A determined man in athletic attire, including a blue long-sleeve shirt, black shorts, and blue socks, jogs around a snow-covered soccer field, showcasing his solitary exercise in a quiet, overcast setting. His long dreadlocks, focused expression, and the serene winter backdrop highlight his dedication to fitness. As he moves, his attire, consisting of a blue sports sweatshirt, black athletic pants, gloves, and sneakers, grips the snowy ground. He is seen running past a chain-link fence enclosing the playground area, with a basketball hoop and children's slide, suggesting a moment of solitary exercise amidst the empty field.",
+          },
+          {
+              "role": "user",
+              "content": 'Create an imaginative image descriptive caption or modify an earlier caption for the user input : " A woman is dancing, HD footage, close-up"',
+          },
+          {
+              "role": "assistant",
+              "content": "A young woman with her hair in an updo and wearing a teal hoodie stands against a light backdrop, initially looking over her shoulder with a contemplative expression. She then confidently makes a subtle dance move, suggesting rhythm and movement. Next, she appears poised and focused, looking directly at the camera. Her expression shifts to one of introspection as she gazes downward slightly. Finally, she dances with confidence, her left hand over her heart, symbolizing a poignant moment, all while dressed in the same teal hoodie against a plain, light-colored background.",
+          },
+          {
+              "role": "user",
+              "content": f'Create an imaginative image descriptive caption or modify an earlier caption in ENGLISH for the user input: " {prompt} "',
+          },
+        ]
+
+        # Tokenize the input text with the instruction
+        inputs = GLMPipeline.tokenizer.apply_chat_template(messages, 
+          add_generation_prompt=True,
+          tokenize=False)
+        
     else:
 
       # Add an explicit instruction to enhance the prompt
@@ -358,6 +412,18 @@ class GLM4PromptEnhancer:
         enhanced_text = enhanced_text.strip()
       except Exception as e:
         return (f"Error during model inference: {str(e)}",)
+    elif GLMPipeline.model_name == "Qwen/Qwen2.5-3B-Instruct":
+      model_inputs = GLMPipeline.tokenizer([inputs], return_tensors="pt").to(GLMPipeline.transformer.device)
+
+      generated_ids = GLMPipeline.transformer.generate(
+          **model_inputs,
+          max_new_tokens=max_new_tokens
+      )
+      generated_ids = [
+          output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+      ]
+
+      enhanced_text = GLMPipeline.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
     else:
       # Move inputs to the same device as the transformer
       inputs = {key: value.to(GLMPipeline.transformer.device) for key, value in inputs.items()}
