@@ -22,9 +22,13 @@ Hope you will enjoy your enhanced prompts and inference capabilities of these mo
 Added support for Qwen 2.5 models.
 
 Models:
+
 `Qwen2.5-VL-3B-Instruct` (Visual, thus supports image + text)
+
 `Qwen2.5-VL-7B-Instruct` (Visual, thus supports image + text)
+
 `Qwen2.5-3B-Instruct` (Language, only supports text)
+
 
 ## Update 2024-10-03
 
