@@ -17,6 +17,14 @@ Their demo is only for usage through OpenAI API and I wanted to build something 
 
 Hope you will enjoy your enhanced prompts and inference capabilities of these models. They are great!
 
+## Update 2025-03-04
+
+Added support for Qwen 2.5 models.
+Models:
+`Qwen2.5-VL-3B-Instruct` (Visual, thus supports image + text)
+`Qwen2.5-VL-7B-Instruct` (Visual, thus supports image + text)
+`Qwen2.5-3B-Instruct` (Language, only supports text)
+
 ## Update 2024-10-03
 
 Added support for quantized models. They perform exceptionally well. Check metrics below.
