@@ -12,8 +12,8 @@ All models will be downloaded automatically through HuggingFace.co. `THUDM/glm-4
 
 The nodes containes an "unload_model" option which frees up VRAM space and makes it suitable for workflows that requires larger VRAM space, like FLUX.1-dev and CogVideoX-5b(-I2V).
 
-The prompt enhancer is based on this example from THUDM [convert_demo.py](https://github.com/THUDM/CogVideo/blob/main/inference/convert_demo.py).
-Thier demo is only for usage through OpenAI API and I wanted to build something local.
+The prompt enhancer is initially based on this example from THUDM [convert_demo.py](https://github.com/THUDM/CogVideo/blob/main/inference/convert_demo.py) but has been further developed over time.
+Their demo is only for usage through OpenAI API and I wanted to build something local.
 
 Hope you will enjoy your enhanced prompts and inference capabilities of these models. They are great!
 
